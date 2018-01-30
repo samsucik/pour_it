@@ -11,7 +11,6 @@ leftM = LargeMotor('outC')
 c1 = ColorSensor('in2')
 c2 = ColorSensor('in3')
 
-
 # setting ,mode for color sensors  to return values 0-7
 c2.mode('COL-COLOR')
 c1.mode('COL-COLOR')
