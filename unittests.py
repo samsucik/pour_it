@@ -17,9 +17,9 @@ class ExampleTestCase(unittest.TestCase):
     def test_uppercase(self):
         self.assertEqual(self.greeting.upper(), 'HELLO WORLD', 'Incorrect uppercased greeting')
 
-    # This will fail
+    # This will pass
     def test_unchanged(self):
-        self.assertEqual(self.greeting, 'HELLO WORLD', 'Incorrect unchanged greeting')
+        self.assertEqual(self.greeting, 'Hello World', 'Incorrect unchanged greeting')
 
 if __name__ == "__main__":
     test_suite = TestLoader().loadTestsFromTestCase(ExampleTestCase)
