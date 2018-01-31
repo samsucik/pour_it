@@ -4,8 +4,10 @@
 # set it up and install all dependencies.
 if [ ! -f "./bin/activate" ]; then
 	echo "Re-creating the virtual environment..."
-	pyvenv .
+	virtualenv -p python2.7 .
 	source ./bin/activate
 	pip install -r requirements.txt
 	deactivate
+else
+	echo "Virtual environment already exists"
 fi
