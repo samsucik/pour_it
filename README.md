@@ -1,4 +1,4 @@
-# pour_it
+# pour_it [![Build Status](https://travis-ci.org/samsucik/pour_it.svg?branch=master)](https://travis-ci.org/samsucik/pour_it)
 Project of group #1 (pour_it) for System Design Project 2017/18.
 
 ## Python Ev3 documentation
