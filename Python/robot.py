@@ -13,14 +13,13 @@ import logging
 import ev3dev
 from ev3dev.ev3 import *
 
-ENV = 'DEV'
-LOGGER = None
+import global_stuff
 
 def init():
-    LOGGER.debug("Setting up the robot. Using environment: '{}'.".format(ENV))
+    logger.debug("Setting up the robot. Using environment: '{}'.".format(global_stuff.ENV))
     m1 = MediumMotor('outA')
     m1.run_timed(time_sp=600, speed_sp=-200)
-    LOGGER.info(ev3dev.__package__)
+    logger.info(ev3dev.__package__)
     c1 = ColorSensor('in2')
     c1.mode = 'COL-COLOR'
     n = c1.value(n=0)
@@ -30,9 +29,14 @@ class Robot():
         pass
 
 if __name__ == "__main__":
+    if sys.version_info < (3,4):
+        raise SystemError('Must be using Python 3.4 or higher')
+    
     script_path = os.path.dirname(os.path.abspath( __file__ ))
     logging.basicConfig(level=logging.DEBUG, format='[%(levelname)s]: %(message)s')
-    LOGGER = logging.getLogger('rbt')
+    global_stuff.LOGGER = logging.getLogger('rbt')
+    global logger
+    logger = global_stuff.LOGGER
 
     if script_path.startswith('/home/robot/'):
         logging.info("Running on real EV3 brick.")
@@ -44,9 +48,9 @@ if __name__ == "__main__":
             raise NameError("Provide environment [DEV, TEST] when running this script.")
         else:
             if sys.argv[1] == 'TEST':
-                ENV = 'TEST'
+                global_stuff.ENV = 'TEST'
             elif sys.argv[1] == 'DEV':
-                ENV = 'DEV'
+                global_stuff.ENV = 'DEV'
             else:
-                raise NameError("Provided environment {} not recognised. Use 'DEV' or 'TEST'")    
+                raise NameError("Provided environment {} not recognised. Use 'DEV' or 'TEST'".format(sys.argv[1]))    
         init()
