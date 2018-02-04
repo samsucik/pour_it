@@ -6,3 +6,8 @@ lib64
 share/
 pyvenv.cfg
 pip-selfcheck.json
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
