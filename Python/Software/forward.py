@@ -2,6 +2,8 @@
 from ev3dev.ev3 import *
 from time import time, sleep
 
+# Steering2 and the original version of "run" have been taken from: https://github.com/Klabbedi/ev3/blob/master/README.md.
+
 # Motor setup
 armM = MediumMotor('outA')
 leftM = LargeMotor('outC')
@@ -96,7 +98,7 @@ def getMinReflVal():
     sleep(2)
     return min_ref
 
-# Steering2 and run are defined as in Michael's link. Must provide reference.
+
 def steering2(course, power):
     if course >= 0:
         if course > 100:
