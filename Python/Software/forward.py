@@ -1,6 +1,7 @@
 # !/usr/bin/env python3
 from ev3dev.ev3 import *
 from time import time, sleep
+import calibrate
 
 # Steering2 and the original version of "run" have been taken from: https://github.com/Klabbedi/ev3/blob/master/README.md.
 
@@ -53,51 +54,6 @@ def turnRight90():
 def turnLeft90():
     rightM.run_timed(time_sp=1500, speed_sp=400)
     leftM.run_timed(time_sp=1500, speed_sp=-400)
-
-def getMaxReflVal():
-    while True:
-        sleep(4)
-        Sound.speak("Present white card.")
-        sleep(4)
-        max_ref = 0
-
-        end_time = time() + 1.5
-        while time() < end_time:
-            read = cline.value()
-            if read > max_ref:
-                max_ref = read
-
-        if max_ref < 70:
-            Sound.speak("Reading failed. Trying again.")
-            sleep(3)
-        else:
-            break
-
-    Sound.speak("Max reflective value read.")
-    sleep(4)
-    return max_ref
-
-def getMinReflVal():
-    while True:
-        Sound.speak("Present black card.")
-        sleep(4)
-        min_ref = 100
-
-        end_time = time() + 1.5
-        while time() < end_time:
-            read = cline.value()
-            if read < min_ref:
-                min_ref = read
-        if min_ref > 10:
-            Sound.speak("Reading failed. Trying again.")
-            sleep(3)
-        else:
-            break
-
-    Sound.speak("Min reflective value read.")
-    sleep(2)
-    return min_ref
-
 
 def steering2(course, power):
     if course >= 0:
@@ -196,16 +152,7 @@ def runUntilStart(time_for_turn,minDist,power,target,kp,kd,ki,direction,minRef,m
     rightM.stop()
     leftM.stop()
 
-#################### Start of script.
-Sound.speak("Starting calibration.")
-sleep(2)
-
-# Getting + setting the min and max reflective values.
-maxRef = getMaxReflVal()
-minRef = getMinReflVal()
-
-# Calibration succeeded.
-
+minRef,maxRef =  calibrate.calibrate()
 sleep(2)
 Sound.speak("Provide colored card.")
 sleep(3)
