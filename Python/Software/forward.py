@@ -4,52 +4,68 @@ from time import time, sleep
 
 # Steering2 and the original version of "run" have been taken from: https://github.com/Klabbedi/ev3/blob/master/README.md.
 
-# Motor setup
+# Motors setup.
 armM = MediumMotor('outA')
 leftM = LargeMotor('outC')
 rightM = LargeMotor('outB')
 
+# Color sensor for following the line.
 cline = ColorSensor('in3')
 cline.mode = 'COL-REFLECT'
 
+# Color sensor for detecting colored card + correct bottle.
 carm = ColorSensor('in2')
 carm.mode = 'COL-COLOR'
 
+# Ultrasonic sensor for detecting the beginning and end of the track.
 uhead = UltrasonicSensor('in4')
 
+# Time for the robot to make the turn at the end (ultrasonic sensor's detection is paused during this time).
 time_for_turn = 7
 
 colours = ['unknown', 'black', 'blue', 'green', 'yellow', 'red', 'white', 'brown']
 
+# Controls the base power to each one of the large motors.
 power = 30
+
+# Minimum and maximum reflected light intensity values.
 minRef = 4
 maxRef = 77
-target = 40  # % of white we want
 
-# PID controller parameters.
+# % of white we want as the target (for the PID controller's error calculation).
+target = 40
+
+# PID controller parameters (need to be re-tuned if the robot changes drastically in the future demos).
 kp = float(2)
 kd = 1
 ki = float(0.5)
 
-direction = -1  # -1 if left side of darker floor, 1 otherwise.
+# -1 if the robot will follow the left side of the black line, 1 otherwise (part of the PID controller).
+direction = -1
 
-# Color of the bottle the robot must find.
-bottle_col = 'black'
+# Colored bottle the robot needs to find.
+bottle_col = 0
 
-# End of the line minimum distance (cm) between ultrasonic sensor and stopping cardboard.
+# End of the line minimum distance (cm) between ultrasonic sensor and margin of our workspace.
 stop_dist_first = 32
+stop_dist_second = 5
 
+# Start minimum distance (cm)
+
+# Variable used for detecting a button press ()
 btn = Button()
 
-def driveforward(time_, speed):
+# Makes the robot drive forward for time_, with speed.
+def driveForward(time_, speed):
     rightM.run_timed(time_sp=time_, speed_sp=speed)
     leftM.run_timed(time_sp=time_, speed_sp=speed)
 
+# Hard-coded right turn (mainly for testing).
 def turnRight90():
     rightM.run_timed(time_sp=1500, speed_sp=-400)
     leftM.run_timed(time_sp=1500, speed_sp=400)
 
-
+# Hard-coded left turn (mainly for testing).
 def turnLeft90():
     rightM.run_timed(time_sp=1500, speed_sp=400)
     leftM.run_timed(time_sp=1500, speed_sp=-400)
@@ -98,7 +114,9 @@ def getMinReflVal():
     sleep(2)
     return min_ref
 
-
+# course = determines how hard and in which direction the robot should turn in order to keep following the line.
+# course = calculated using kp,ki,kd
+# power = reference power we give to the wheels
 def steering2(course, power):
     if course >= 0:
         if course > 100:
@@ -117,66 +135,111 @@ def steering2(course, power):
     return (int(power_left), int(power_right))
 
 
-# Hardcoded turn for when the robot finds the correct bottle and needs to turn.
+# Hardcoded turn: called when robot finds the correct bottle and needs to turn.
 def goBackAndTurn():
+    print("goBackAndTurn: reached")
     rightM.run_timed(time_sp=1200, speed_sp=-200)
     leftM.run_timed(time_sp=1200, speed_sp=-200)
-    sleep(1.5)
+    sleep(2)
     leftM.run_timed(time_sp=1050,speed_sp=400)
-    sleep(1)
+    sleep(2)
     rightM.run_forever(speed_sp=300)
     leftM.run_forever(speed_sp=300)
-    while(True):
+    while(not(btn.any())):
         if(uhead.distance_centimeters <= 5):
             leftM.stop()
             rightM.stop()
             break
 
-
+# Make the robot follow the line for a set amount of time.
 def runTimed(timeRun, power, target, kp, kd, ki, direction, minRef, maxRef):
+    print("runTimed: reached")
     lastError = error = integral = 0
     leftM.run_direct()
     rightM.run_direct()
     end_time = time() + timeRun
     while (not btn.any() and time() < end_time):
+        print("runTimed: loop " + time())
         refRead = cline.value()
 
         # Is it ok if refRead-minRef will be negative?
         error = target - (100 * (refRead - minRef) / (maxRef - minRef))
         derivative = error - lastError
         lastError = error
-        integral = float(0.5) * integral + error
+        if(error * lastError < 0):
+            integral = 0
+        else:
+            integral = float(0.5) * integral + error
         course = (kp * error + kd * derivative + ki * integral) * direction
         for (motor, pow) in zip((leftM, rightM), steering2(course, power)):
             motor.duty_cycle_sp = pow
         sleep(0.01)  # Aprox 100Hz
 
-def runDemo(time_for_turn, minDist, power, target, kp, kd, ki, direction, minRef, maxRef):
-    print("Reached runDemo")
+# The following method will be run after the colored card has been confirmed.
+# runDemo is the only variant of run which will be thoroughly commented.
+def runDemo(time_for_turn, minDist1, minDist2, power, target, kp, kd, ki, direction, minRef, maxRef):
+    print("runDemo: reached")
     lastError = error = integral = 0
+
+    # This mode will allow us to change the speed of the motors immediately.
     leftM.run_direct()
     rightM.run_direct()
-    while (not btn.any() and carm.value() != bottle_col and uhead.distance_centimeters > minDist):
+
+    # "switch" for figuring out why the robot stopped.
+    sw = 0
+
+    # Run loop as long as no button has been pressed.
+    while (not btn.any()):
+        print("runDemo: main loop")
+        # Break loop if the color sensor has detected the correct bottle.
+        if(carm.value() == bottle_col):
+            sw = 1
+            break
+        # Break loop if the robot has reached the end of the line of bottles.
+        if(uhead.distance_centimeters <= minDist1):
+            sw = 2
+            break
+
+        # Read the current reflected light intensity.
         refRead = cline.value()
+
+        # Calculate the current error and its derivative.
         error = target - (100 * (refRead - minRef) / (maxRef - minRef))
         derivative = error - lastError
         lastError = error
-        integral = float(0.5) * integral + error
+
+        # If the error changes sign, reset the accumulated error.
+        if(error * lastError < 0):
+            integral = 0
+        else:
+            integral = float(0.5) * integral + error
+
+        # PID controller.
         course = (kp * error + kd * derivative + ki * integral) * direction
+
+        # Calculate the power each motor should be given and pass it to them.
         for (motor, pow) in zip((leftM, rightM), steering2(course, power)):
             motor.duty_cycle_sp = pow
         sleep(0.01)  # Approx 100Hz
+    # If the loop was broken, stop both motors and retract the arm.
     leftM.stop()
     rightM.stop()
-    if(carm.value() == bottle_col):
-        armM.run_timed(time_sp=600,speed_sp=200)
+    armM.run_timed(time_sp=600,speed_sp=200)
+    sleep(1)
+    # If the bottle is detected, go back and turn towards it.
+    if(sw == 1):
+        print("runDemo: bottle detected")
         goBackAndTurn()
-    elif(uhead.distance_centimeters <= minDist):
-        armM.run_timed(time_sp=600,speed_sp=200)
+    # If the end of the line was reached, call the "runUntilStart" method.
+    elif(sw == 2):
+        print("runDemo: end of line reached")
         sleep(2)
-        runUntilStart(time_for_turn,5,power,target,kp,kd,ki,direction,minRef,maxRef)
+        runUntilStart(time_for_turn,minDist2,power,target,kp,kd,ki,direction,minRef,maxRef)
+    else:
+        print("runDemo: execution interrupted by button press")
 
-def runUntilStart(time_for_turn,minDist,power,target,kp,kd,ki,direction,minRef,maxRef):
+# This method will be called after the robot reached the end of the line of bottles.
+def runUntilStart(time_for_turn, minDist,power,target,kp,kd,ki,direction,minRef,maxRef):
     print("Reached runUntilStart")
     lastError = error = integral = 0
     leftM.run_direct()
@@ -188,7 +251,10 @@ def runUntilStart(time_for_turn,minDist,power,target,kp,kd,ki,direction,minRef,m
         error = target - (100 * (refRead - minRef) / (maxRef - minRef))
         derivative = error - lastError
         lastError = error
-        integral = float(0.5) * integral + error
+        if(error * lastError < 0):
+            integral = 0
+        else:
+            integral = float(0.5) * integral + error
         course = (kp * error + kd * derivative + ki * integral) * direction
         for (motor, pow) in zip((leftM, rightM), steering2(course, power)):
             motor.duty_cycle_sp = pow
@@ -196,57 +262,60 @@ def runUntilStart(time_for_turn,minDist,power,target,kp,kd,ki,direction,minRef,m
     rightM.stop()
     leftM.stop()
 
+# Method for setting bottle_col.
+def presentColoredCard():
+    sleep(2)
+
+    # Wait for input on control sensor.
+    while True:
+
+        Sound.speak("Provide colored card.")
+        sleep(3)
+
+        while carm.value() == 0 or carm.value() == 1:
+            print("No color inputted")
+            sleep(1)
+
+        usr_col = carm.value()
+
+        Sound.speak("Your color was " + colours[usr_col])
+        sleep(3)
+        Sound.speak("Confirm color")
+        sleep(3)
+
+        while carm.value() == 0 or carm.value()==1:
+            print("No color inputted")
+            sleep(1)
+
+        confirm_val = carm.value()
+
+        if confirm_val == usr_col:
+            Sound.speak("Colours match")
+            global bottle_col
+            bottle_col = confirm_val # set color of bottle that needs to be found
+            sleep(2.5)
+            break
+        else:
+            Sound.speak("Colours do not match")
+            sleep(2)
+
 #################### Start of script.
-Sound.speak("Starting calibration.")
-sleep(2)
+#Sound.speak("Starting calibration.")
+#sleep(2)
 
 # Getting + setting the min and max reflective values.
-maxRef = getMaxReflVal()
-minRef = getMinReflVal()
+#maxRef = getMaxReflVal()
+#minRef = getMinReflVal()
 
 # Calibration succeeded.
-
-sleep(2)
-Sound.speak("Provide colored card.")
-sleep(3)
-
-# Must make sure arm is in correct position?
-
-# Wait for input on control sensor.
-while True:
-
-    while carm.value() == 0:
-        print("No color inputted")
-        sleep(1)
-
-    usr_col = carm.value()
-
-    Sound.speak("Your color was " + colours[usr_col])
-    sleep(3)
-    Sound.speak("Confirm color")
-    sleep(3)
-
-    while carm.value() == 0:
-        print("No color inputted")
-        sleep(1)
-
-    confirm_val = carm.value()
-
-    if confirm_val == usr_col:
-        Sound.speak("Colours match")
-        bottle_col = confirm_val # set color of bottle that needs to be found
-        sleep(1)
-        break
-    else:
-        Sound.speak("Colours do not match")
-        sleep(2)
+presentColoredCard()
 
 armM.run_timed(time_sp=600, speed_sp=-200)
 sleep(3)
 
 # Move along line of bottles and stop when either the sensor detects the stopping sign or the color sensor detects the
 # correct color.
-runDemo(time_for_turn, stop_dist_first, power, target, kp, kd, ki, direction, minRef, maxRef)
+runDemo(time_for_turn, stop_dist_first, stop_dist_second, power, target, kp, kd, ki, direction, minRef, maxRef)
 
 
 
