@@ -224,7 +224,7 @@ def runDemo(time_for_turn, minDist1, minDist2, power, target, kp, kd, ki, direct
     # If the loop was broken, stop both motors and retract the arm.
     leftM.stop()
     rightM.stop()
-    armM.run_timed(time_sp=600,speed_sp=200)
+    armM.run_timed(time_sp=600, speed_sp=200)
     sleep(1)
     # If the bottle is detected, go back and turn towards it.
     if(sw == 1):
@@ -251,7 +251,7 @@ def runUntilStart(time_for_turn, minDist,power,target,kp,kd,ki,direction,minRef,
         error = target - (100 * (refRead - minRef) / (maxRef - minRef))
         derivative = error - lastError
         lastError = error
-        if(error * lastError < 0):
+        if error * lastError < 0:
             integral = 0
         else:
             integral = float(0.5) * integral + error
@@ -316,26 +316,3 @@ sleep(3)
 # Move along line of bottles and stop when either the sensor detects the stopping sign or the color sensor detects the
 # correct color.
 runDemo(time_for_turn, stop_dist_first, stop_dist_second, power, target, kp, kd, ki, direction, minRef, maxRef)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -29,7 +29,7 @@ def turnLeft90():
     rightM.run_timed(time_sp=1500, speed_sp=400)
     leftM.run_timed(time_sp=1500, speed_sp=-400)
 
-while colours[c1.value()] == 'unknown' or  colours[c1.value()] == 'black':
+while colours[c1.value()] == 'unknown' or colours[c1.value()] == 'black':
     print("color not selected")
     time.sleep(1)
 
