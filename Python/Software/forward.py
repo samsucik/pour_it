@@ -37,8 +37,11 @@ maxRef = 77
 target = 40
 
 # PID controller parameters (need to be re-tuned if the robot changes drastically in the future demos).
-kp = float(2)
-kd = 1
+# kp = float(2)
+# kd = 1
+# ki = float(0.5)
+kp = float(1)
+kd = 3
 ki = float(0.5)
 
 # -1 if the robot will follow the left side of the black line, 1 otherwise (part of the PID controller).
