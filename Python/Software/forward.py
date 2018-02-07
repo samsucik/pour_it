@@ -1,6 +1,7 @@
 # !/usr/bin/env python3
 from ev3dev.ev3 import *
 from time import time, sleep
+import calibrate
 
 # Steering2 and the original version of "run" have been taken from: https://github.com/Klabbedi/ev3/blob/master/README.md.
 
@@ -138,13 +139,13 @@ def steering2(course, power):
 # Hardcoded turn: called when robot finds the correct bottle and needs to turn.
 def goBackAndTurn():
     print("goBackAndTurn: reached")
-    rightM.run_timed(time_sp=1200, speed_sp=-200)
-    leftM.run_timed(time_sp=1200, speed_sp=-200)
+    rightM.run_timed(time_sp=1150, speed_sp=-200)
+    leftM.run_timed(time_sp=1150, speed_sp=-200)
     sleep(2)
-    leftM.run_timed(time_sp=1050,speed_sp=400)
+    leftM.run_timed(time_sp=1750,speed_sp=200)
     sleep(2)
-    rightM.run_forever(speed_sp=300)
-    leftM.run_forever(speed_sp=300)
+    rightM.run_forever(speed_sp=200)
+    leftM.run_forever(speed_sp=200)
     while(not(btn.any())):
         if(uhead.distance_centimeters <= 5):
             leftM.stop()
@@ -261,6 +262,7 @@ def runUntilStart(time_for_turn, minDist,power,target,kp,kd,ki,direction,minRef,
         sleep(0.01)  # Aprox 100Hz
     rightM.stop()
     leftM.stop()
+    Sound.speak("Your colour was not found")
 
 # Method for setting bottle_col.
 def presentColoredCard():
@@ -299,15 +301,13 @@ def presentColoredCard():
             Sound.speak("Colours do not match")
             sleep(2)
 
-#################### Start of script.
-#Sound.speak("Starting calibration.")
-#sleep(2)
+#################### Start of script ################
+Sound.speak("Starting calibration.")
+sleep(2)
 
-# Getting + setting the min and max reflective values.
-#maxRef = getMaxReflVal()
-#minRef = getMinReflVal()
-
+(minRef,maxRef) = calibrate.calibrate(cline)
 # Calibration succeeded.
+
 presentColoredCard()
 
 armM.run_timed(time_sp=600, speed_sp=-200)
@@ -316,26 +316,3 @@ sleep(3)
 # Move along line of bottles and stop when either the sensor detects the stopping sign or the color sensor detects the
 # correct color.
 runDemo(time_for_turn, stop_dist_first, stop_dist_second, power, target, kp, kd, ki, direction, minRef, maxRef)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
