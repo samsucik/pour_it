@@ -6,7 +6,7 @@ python:
 
 # Command to install dependencies
 install:
-  - install_dependencies.sh
+  - ./install_dependencies.sh
 
 # Command to run tests
 script:
