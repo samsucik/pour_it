@@ -6,7 +6,7 @@ python:
 
 # Command to install dependencies
 install:
-  - pip3 install -r requirements.txt
+  - install_dependencies.sh
 
 # Command to run tests
 script:
