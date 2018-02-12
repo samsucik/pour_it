@@ -1,14 +1,16 @@
 import sys, time
+from queue import Queue
 from time import sleep
 import numpy as np
 import cv2
 import os.path
 
-custom_shapes_names = ['triangle', 'cross', 'square']
+custom_shapes_names = ['triangle', 'star', 'circle', 'square', 'cross', 'heart']
 custom_shapes_contours = dict()
 cam_id = 1 # 0 for default camera
 frame_widths = [160,176,320,352,432,544,640,800,960,1184,1280]
 custom_shape_sim_threshold = 0.08
+
 
 # Detects polygon with 3, 4, 5 or many sides in passed contour
 def detect_polygon(c):
@@ -25,6 +27,7 @@ def detect_polygon(c):
     else:
         return "circle"
 
+
 # Loads binary images of custom shapes from the saved files
 # so we can then recognise the patterns in new images coming
 # from the camera
@@ -34,6 +37,7 @@ def load_custom_shapes():
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         _, contours, _ = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         custom_shapes_contours[n] = contours[0]
+
 
 # Detects any custom (loaded from files) shapes in passed contour
 def detect_custom_shape(c_unknown):
@@ -51,6 +55,7 @@ def detect_custom_shape(c_unknown):
         for n, s in similarities.items():
             if s == min_sim:
                 return n
+
 
 # Returns a camera object with all important parameters set 
 # (resolution, FPS, contrast, B&W, etc)
@@ -70,6 +75,7 @@ def setup_camera():
     camera.set(cv2.CAP_PROP_SATURATION, 0.0)
     camera.set(cv2.CAP_PROP_GAIN, 0.0)
     return camera
+
 
 # Scans custom shapes using the camera and saves them into files. 
 # Does not overwrite existing files.
@@ -91,6 +97,7 @@ def capture_custom_shapes():
             
             cv2.imwrite(fname, img)
 
+
 # Displays simple live stream coming from the camera.
 def stream_from_camera(camera):
     while(camera.isOpened()):
@@ -100,72 +107,95 @@ def stream_from_camera(camera):
             break    
 
 
+look_back_window = 3
+previously_seen = Queue(maxsize=look_back_window)
+while not previously_seen.full():
+    previously_seen.put('some strange unidentifiable shape')
+
+def pick_shapes_present_in_stream(custom_shapes):
+    if previously_seen.full():
+        previously_seen.get()
+    
+    previously_seen.put(custom_shapes)
+    
+    previously_seen_list = list(previously_seen.queue)
+    shapes_seen_consistently = set()
+    for shape in custom_shapes_names:
+        seen_consistently = True
+        for shapes_set in previously_seen_list:
+            if shape not in shapes_set:
+                seen_consistently = False
+                break
+        if seen_consistently:
+            shapes_seen_consistently.add(shape)
+
+    return shapes_seen_consistently
+
+def stream_and_detect(camera, displayStream=False):
+    
+
+    # Processes the live stream, for every snapshot detecting the shapes.
+    while True:        
+        # Get fresh image from camera
+        r, img_raw = camera.read()
+        img_labelled = img_raw
+
+        # Pre-process the image
+        img = cv2.cvtColor(img_raw, cv2.COLOR_BGR2GRAY)
+        img = cv2.GaussianBlur(img, (5, 5), 0)
+        (thresh, img) = cv2.threshold(img, 60, 255, cv2.THRESH_BINARY_INV)
+        
+        # Find all contours in the image
+        img, contours, hierarchy = cv2.findContours(img, 
+            cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        polygons = []
+        custom_shapes = set()
+
+        # Loop through found contours and try detecting those 
+        # that resemble custom shapes or polygons.
+        for c in contours:            
+            # Detect and remember all detected shapes
+            poly_label = detect_polygon(c)
+            polygons.append(poly_label)
+            custom_shape_label = detect_custom_shape(c)
+            if custom_shape_label:
+                custom_shapes.add(custom_shape_label)
+            
+            if displayStream:
+                # Draw the filled contours into the original image
+                ratio = 1
+                M = cv2.moments(c)
+                if M["m00"] != 0:
+                    cX = int((M["m10"] / M["m00"]) * ratio)
+                    cY = int((M["m01"] / M["m00"]) * ratio)
+                    
+                    img_labelled = cv2.drawContours(img_raw, [c], -1, (0, 255, 0), 1)
+                    
+                    if custom_shape_label:
+                        img_labelled = cv2.putText(img_labelled, custom_shape_label, (cX, cY), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+
+        if displayStream:
+            # Show the captured image with added shape contours 
+            # and possibly shape labels as well
+            cv2.imshow("Image", img_labelled)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        # See in command line what we've found (less resource-intensive 
+        # alternative of showing the contours and labels in the original image)
+        # print("Polygons: {}".format(polygons))        
+        shapes_really_present = pick_shapes_present_in_stream(custom_shapes)
+        print("Shapes present: {}".format(shapes_really_present))
+
+        # sleep(0.03)
+
 
 capture_custom_shapes()
-
 load_custom_shapes()
-
 camera = setup_camera()
-
-
-
-# Processes the live stream, for every snapshot detecting the shapes.
-while True:
-    
-    # Get fresh image from camera
-    r, img_raw = camera.read()
-    img_labelled = img_raw
-
-    # Pre-process the image
-    img = cv2.cvtColor(img_raw, cv2.COLOR_BGR2GRAY)
-    img = cv2.GaussianBlur(img, (5, 5), 0)
-    (thresh, img) = cv2.threshold(img, 60, 255, cv2.THRESH_BINARY_INV)
-    
-    # Find all contours in the image
-    img, contours, hierarchy = cv2.findContours(img, 
-        cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-    polygons = []
-    custom_shapes = []
-
-    # Loop through found contours and try detecting those 
-    # that resemble custom shapes or polygons.
-    for c in contours:
-        
-        # Detect and remember all detected shapes
-        poly_label = detect_polygon(c)
-        polygons.append(poly_label)
-        custom_shape_label = detect_custom_shape(c)
-        if custom_shape_label:
-            custom_shapes.append(custom_shape_label)
-        
-        # Draw the filled contours into the original image
-        ratio = 1
-        M = cv2.moments(c)
-        if M["m00"] != 0:
-            cX = int((M["m10"] / M["m00"]) * ratio)
-            cY = int((M["m01"] / M["m00"]) * ratio)
-            
-            img_labelled = cv2.drawContours(img_raw, [c], -1, (0, 255, 0), 1)
-            
-            if custom_shape_label:
-                img_labelled = cv2.putText(img_labelled, custom_shape_label, (cX, cY), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-
-    # Show the captured image with added shape contours 
-    # and possibly shape labels as well
-    cv2.imshow("Image", img_labelled)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-    # See in command line what we've found (less resource-intensive 
-    # alternative of showing the contours and labels in the original image)
-    print("Custom: {}".format(custom_shapes))
-    # print("Polygons: {}".format(polygons))
-
-    sleep(0.05)
-
-
+stream_and_detect(camera, displayStream=True)
 
 camera.release()
 cv2.destroyAllWindows()
