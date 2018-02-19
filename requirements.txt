@@ -1,4 +1,14 @@
+setuptools
+pip
+cycler==0.10.0
+imutils==0.4.5
 linecache2==1.0.0
-six==1.11.0
+matplotlib==2.1.2
+numpy==1.14.0
+opencv-python==3.4.0.12
+pyparsing==2.2.0
+python-dateutil==2.6.1
+pytz==2017.3
+six==1.10.0
 traceback2==1.4.0
 unittest2==1.1.0
