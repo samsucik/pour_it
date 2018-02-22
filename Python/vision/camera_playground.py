@@ -4,10 +4,13 @@ from time import sleep
 import numpy as np
 import cv2
 import os.path
+import rpyc
+conn = rpyc.classic.connect('ev3dev') # host name or IP address of the EV3
+ev3 = conn.modules['ev3dev.ev3']      # import ev3dev.ev3 remotely
 
 custom_shapes_names = ['triangle', 'star', 'circle', 'square', 'cross', 'heart']
 custom_shapes_contours = dict()
-cam_id = 1 # 0 for default camera
+cam_id = 0 # 0 for default camera
 frame_widths = [160,176,320,352,432,544,640,800,960,1184,1280]
 custom_shape_sim_threshold = 0.08
 
@@ -189,6 +192,8 @@ def stream_and_detect(camera, displayStream=False):
         shapes_really_present = pick_shapes_present_in_stream(custom_shapes)
         print("Shapes present: {}".format(shapes_really_present))
 
+        if 'circle' in shapes_really_present:
+            ev3.Sound.beep()
         # sleep(0.03)
 
 
