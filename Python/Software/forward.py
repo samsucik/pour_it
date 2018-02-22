@@ -195,7 +195,6 @@ def generalPIDRun(mode, power, target, direction, kp, kd, ki, minRef, maxRef, *a
     returnVal = mode_PID[mode](args)
 
     while(not returnVal):
-        print("runTimed: loop " + time())
         refRead = cline.value()
 
         # Calculate the current error and its derivative.
@@ -216,49 +215,9 @@ def generalPIDRun(mode, power, target, direction, kp, kd, ki, minRef, maxRef, *a
         for (motor, pow) in zip((leftM, rightM), steering2(course, power)):
             motor.duty_cycle_sp = pow
         sleep(0.01)  # Approx 100Hz
-    # If the loop was broken, stop both motors and retract the arm.
-    leftM.stop()
-    rightM.stop()
-    armM.run_timed(time_sp=600, speed_sp=200)
-    sleep(1)
-    # If the bottle is detected, go back and turn towards it.
-    if(sw == 1):
-        print("runDemo: bottle detected")
-        goBackAndTurn()
-    # If the end of the line was reached, call the "runUntilStart" method.
-    elif(sw == 2):
-        print("runDemo: end of line reached")
-        sleep(2)
-        runUntilStart(time_for_turn,minDist2,power,target,kp,kd,ki,direction,minRef,maxRef)
-    else:
-        print("runDemo: execution interrupted by button press")
-
-# This method will be called after the robot reached the end of the line of bottles.
-def runUntilStart(time_for_turn, minDist,power,target,kp,kd,ki,direction,minRef,maxRef):
-    print("Reached runUntilStart")
-    lastError = error = integral = 0
-    leftM.run_direct()
-    rightM.run_direct()
-    end_time = time() + time_for_turn
-    while (not btn.any() and (time() < end_time or uhead.distance_centimeters > minDist)):
-        refRead = cline.value()
-        # Is it ok if refRead-minRef will be negative?
-        error = target - (100 * (refRead - minRef) / (maxRef - minRef))
-        derivative = error - lastError
-        lastError = error
-        if error * lastError < 0:
-            integral = 0
-        else:
-            integral = float(0.5) * integral + error
-        course = (kp * error + kd * derivative + ki * integral) * direction
-        for (motor, pow) in zip((leftM, rightM), steering2(course, power)):
-            motor.duty_cycle_sp = pow
-        sleep(0.01)  # Aprox 100Hz
         returnVal = mode_PID[mode](args)
-
-    rightM.stop()
-    leftM.stop()
     return returnVal
+
 
 # Method for setting bottle_col.
 def presentColoredCard():
@@ -311,4 +270,3 @@ sleep(3)
 
 # Move along line of bottles and stop when either the sensor detects the stopping sign or the color sensor detects the
 # correct color.
-runDemo(time_for_turn, stop_dist_first, stop_dist_second, power, target, kp, kd, ki, direction, minRef, maxRef)

@@ -12,7 +12,7 @@ ev3 = conn.modules['ev3dev.ev3']      #import ev3dev.ev3
 
 custom_shapes_names = ['triangle', 'star', 'circle', 'square', 'cross', 'heart']
 custom_shapes_contours = dict()
-cam_id = 0 # 0 for default camera
+cam_id = 1 # 0 for default camera
 frame_widths = [160,176,320,352,432,544,640,800,960,1184,1280]
 custom_shape_sim_threshold = 0.08
 
