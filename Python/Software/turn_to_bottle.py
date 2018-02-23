@@ -1,15 +1,19 @@
 # !/usr/bin/env python3
 from ev3dev.ev3 import *
+import rpyc
+conn = rpyc.classic.connect('ev3dev') #host name or IP address of EV3
+ev3 = conn.modules['ev3dev.ev3'] #import ev3dev.ev3
 from time import time, sleep
 import math
 import sys
 import json
 
-leftM = LargeMotor('outC')
-rightM = LargeMotor('outB')
-ultrasonic = UltrasonicSensor('in4')
+leftM = ev3.LargeMotor('outC')
+rightM = ev3.LargeMotor('outB')
+ultrasonic = ev3.UltrasonicSensor('in4')
 camera_aspect_width = 160
 base_speed = 100
+turn_speed_boost = 100
 leftm = []
 rightm = []
 
@@ -39,11 +43,11 @@ def step_turn(x_coord):
 
 def drive(force):
     if force >= 0:
-        speed_leftM = base_speed + (force*100)
+        speed_leftM = base_speed + (force*turn_speed_boost)
         speed_rightM = base_speed 
     else:
         speed_leftM = base_speed 
-        speed_rightM = base_speed - (force*100)     
+        speed_rightM = base_speed - (force*turn_speed_boost)     
          
     rightM.run_timed(time_sp=100, speed_sp=speed_rightM)
     leftM.run_timed(time_sp=100, speed_sp=speed_leftM).wait_while('running')
@@ -58,7 +62,4 @@ def get_motor_speeds():
     return movements
 
 def turn_to_bottle(pattern_x_coord):
-    while (ultrasonic.distance_centimeters > 5):
-        drive(step_turn(pattern_x_coord))
-
-    return True
+    drive(step_turn(pattern_x_coord))
