@@ -195,7 +195,8 @@ def stream_and_detect(camera, displayStream=False):
 capture_custom_shapes()
 load_custom_shapes()
 camera = setup_camera()
-stream_and_detect(camera, displayStream=True)
+# stream_and_detect(camera, displayStream=True)
+stream_from_camera(camera)
 
 camera.release()
 cv2.destroyAllWindows()
