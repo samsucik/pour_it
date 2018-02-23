@@ -1,4 +1,7 @@
-<img src="logo/pourit_logo.png" width="200" alt="pour_it logo" style="display: block" align="left"><br />
+<img src="logo/pourit_logo.png" width="200" alt="pour_it logo" style="display: block" align="left">
+
+<br/><br/>
+<br/><br/>
 
 [![Build Status](https://travis-ci.org/samsucik/pour_it.svg?branch=master)](https://travis-ci.org/samsucik/pour_it)
 
