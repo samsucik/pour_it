@@ -18,5 +18,5 @@ sudo ifconfig usb0 up
 
 
 
-sudo ip addr add 192.168.1.2/24 dev usb0
+sudo ip addr add 192.168.1.2/24 dev eth0
 sudo ip route add default via 192.168.1.1
