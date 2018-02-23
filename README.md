@@ -1,4 +1,4 @@
-![pour_it logo](logo/pourit_logo.png =200x)
+![pour_it logo](./logo/pourit_logo.png | width=200)
 
 [![Build Status](https://travis-ci.org/samsucik/pour_it.svg?branch=master)](https://travis-ci.org/samsucik/pour_it)
 
