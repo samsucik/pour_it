@@ -42,7 +42,7 @@ class Camera():
             return "circle"
 
 
-    # Loads binary images of custom shapes from the saved files
+    # Loads B&W binary images of custom shapes from the saved files
     # so we can then recognise the patterns in new images coming
     # from the camera
     def load_custom_shapes(self):
@@ -91,13 +91,15 @@ class Camera():
         return camera
 
 
+    # Closes the camera and destroys any graphical windows that 
+    # have been generated
     def destroy_camera(self):
         self.camera.release()
         cv2.destroyAllWindows()
 
 
     # Scans custom shapes using the camera and saves them into files. 
-    # Does not overwrite existing files.
+    # Does NOT overwrite existing files.
     def capture_custom_shapes(self):
         for n in self.custom_shapes_names:
             fname = n + '.png'
@@ -130,6 +132,9 @@ class Camera():
                 break    
 
 
+    # Decides which shapes are really present in the image stream.
+    # Can do simple smoothing for higher reliability: Only consider
+    # shape as present if it occured in last N images.
     def pick_shapes_present_in_stream(self, custom_shapes):
         if self.look_back_window < 1:
             return set(custom_shapes)
@@ -171,12 +176,17 @@ class Camera():
         return img
 
 
+    # Returns the X position (absolute, as an int) of the given contour
+    # in the image.
     def get_x_position_of_contour(self, contour):
         moments = cv2.moments(contour)
         x_coordinate = int(moments['m10']/moments['m00'])
         return x_coordinate
 
 
+    # Processes the camera stream, looking for the specified shape. Can be restricted
+    # to only run for a maximum of timeToRun seconds and then return None if the desired
+    # shape was not detected.
     def stream_and_detect(self, wantedShape, showStream=False, continuousStream=False, timeToRun=1):
         start = time.time()
         runAgain = True
@@ -250,6 +260,7 @@ class Camera():
 
 
 
+    # Simple showcase of what this class can do.
     def demo(self):
         self.capture_custom_shapes()
         self.load_custom_shapes()

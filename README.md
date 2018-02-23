@@ -1,4 +1,7 @@
-# pour_it [![Build Status](https://travis-ci.org/samsucik/pour_it.svg?branch=master)](https://travis-ci.org/samsucik/pour_it)
+![pour_it logo](logo/pourit_logo.png =200x)
+
+[![Build Status](https://travis-ci.org/samsucik/pour_it.svg?branch=master)](https://travis-ci.org/samsucik/pour_it)
+
 Project of group #1 (pour_it) for System Design Project 2017/18.
 
 ## Python Ev3 documentation
@@ -25,3 +28,5 @@ and ensure (probably applies to Ubuntu users only) that requirements.txt does no
 In order to be able to test the code without being connected to the brick, we have the TEST environment which does not use the true ```ev3dev``` libraries but replaces them by an abstraction [obtained here](https://gitlab.com/ev3py/ev3py-runlocal) (infinite thanks to [Timon Reinold](https://gitlab.com/users/tirei/contributed)!).
 
 More info on how to run the code in the two environments will follow soon.
+
+Authors: [Andrew](https://github.com/Andrew-lindsay), [Bob](http://bob.com/), [Jonas](https://github.com/Jonuxs), [Max](https://github.com/mgirkins), [Mihai](https://github.com/MihaiAC), [Michael](https://github.com/mmaclennan4), [Sam](https://github.com/samsucik)
