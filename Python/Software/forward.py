@@ -7,20 +7,20 @@ import calibrate
 
 ############################# SETUP + VARIABLES ########################################################################
 # Motors setup.
-armM = MediumMotor('outA')
-leftM = LargeMotor('outC')
-rightM = LargeMotor('outB')
+#armM = MediumMotor('outA')
+leftM = LargeMotor('outD')
+rightM = LargeMotor('outA')
 
 # Color sensor for following the line.
-cline = ColorSensor('in3')
+cline = ColorSensor('in2')
 cline.mode = 'COL-REFLECT'
 
 # Color sensor for detecting colored card + correct bottle.
-carm = ColorSensor('in2')
-carm.mode = 'COL-COLOR'
+#carm = ColorSensor('in2')
+#carm.mode = 'COL-COLOR'
 
 # Ultrasonic sensor for detecting the beginning and end of the track.
-uhead = UltrasonicSensor('in4')
+uhead = UltrasonicSensor('in1')
 
 # Time for the robot to make the turn at the end (ultrasonic sensor's detection is paused during this time).
 time_for_turn = 7
@@ -46,7 +46,7 @@ kd = 3
 ki = float(0.5)
 
 # -1 if the robot will follow the left side of the black line, 1 otherwise (part of the PID controller).
-direction = -1
+direction = 1
 
 # Colored bottle the robot needs to find.
 bottle_col = 0
@@ -161,31 +161,43 @@ def goBackAndTurn():
 # returns 1 if a button was pressed.
 # returns 2 if execution time was exceeded.
 def timedCondition(args):
-    if(not btn.any() and time() < args[0]):
+    if(not btn.any() and time() < float(args[0])):
         return 0
-    elif(time() >= args[0]):
+    elif(time() >= float(args[0])):
         return 2
     else:
         return 1
 
 ##################NEXT 2 CONDITIONS SHOULD BE REWRITTEN IF NEEDED##################################################
-# args[0] = bottle_col, args[1] = minDist1
-def demoCondition(args):
-    return (not btn.any() and carm.value() != args[0] and uhead.distance_centimeters > args[1])
 
-# args[0] = end_time, args[1] = minDist
+# args[0] = waiting_time, args[1] = minDist, args[2] = leftM, args[3] = rightM
 def runUntilStartCondition(args):
-    return not btn.any() and (time() < args[0] or uhead.distance_centimeters > args[1])
+    if(uhead.distance_centimeters < args[1]):
+        args[2].stop()
+        args[3].stop()
+        sleep(args[0])
+        if(uhead.distance_centimeters < args[1]):
+            return 0
+        else:
+            args[2].run_direct()
+            args[3].run_direct()
+            return 1
+    elif(btn.any()):
+        return 0
+    else:
+        return 2
 
 def createPIDmodes():
     mode_PID['timed'] = timedCondition
-    mode_PID['demo'] = demoCondition
     mode_PID['runUntilStart'] = runUntilStartCondition
 
 # mode and params:
 # 'timed' -> args[0] = time() + amount of time you want it to run for.
 #
 def generalPIDRun(mode, power, target, direction, kp, kd, ki, minRef, maxRef, *args, **kwargs):
+
+    createPIDmodes()
+
     lastError = error = integral = 0
 
     # This mode will allow us to change the speed of the motors immediately.
@@ -216,57 +228,114 @@ def generalPIDRun(mode, power, target, direction, kp, kd, ki, minRef, maxRef, *a
             motor.duty_cycle_sp = pow
         sleep(0.01)  # Approx 100Hz
         returnVal = mode_PID[mode](args)
+
+    leftM.stop()
+    rightM.stop()
+
     return returnVal
 
 
 # Method for setting bottle_col.
-def presentColoredCard():
-    sleep(2)
-
-    # Wait for input on control sensor.
-    while True:
-
-        Sound.speak("Provide colored card.")
-        sleep(3)
-
-        while carm.value() == 0 or carm.value() == 1:
-            print("No color inputted")
-            sleep(1)
-
-        usr_col = carm.value()
-
-        Sound.speak("Your color was " + colours[usr_col])
-        sleep(3)
-        Sound.speak("Confirm color")
-        sleep(3)
-
-        while carm.value() == 0 or carm.value()==1:
-            print("No color inputted")
-            sleep(1)
-
-        confirm_val = carm.value()
-
-        if confirm_val == usr_col:
-            Sound.speak("Colours match")
-            global bottle_col
-            bottle_col = confirm_val # set color of bottle that needs to be found
-            sleep(2.5)
-            break
-        else:
-            Sound.speak("Colours do not match").wait()
-            sleep(2)
+# def presentColoredCard():
+#     sleep(2)
+#
+#     # Wait for input on control sensor.
+#     while True:
+#
+#         Sound.speak("Provide colored card.")
+#         sleep(3)
+#
+#         while carm.value() == 0 or carm.value() == 1:
+#             print("No color inputted")
+#             sleep(1)
+#
+#         usr_col = carm.value()
+#
+#         Sound.speak("Your color was " + colours[usr_col])
+#         sleep(3)
+#         Sound.speak("Confirm color")
+#         sleep(3)
+#
+#         while carm.value() == 0 or carm.value()==1:
+#             print("No color inputted")
+#             sleep(1)
+#
+#         confirm_val = carm.value()
+#
+#         if confirm_val == usr_col:
+#             Sound.speak("Colours match")
+#             global bottle_col
+#             bottle_col = confirm_val # set color of bottle that needs to be found
+#             sleep(2.5)
+#             break
+#         else:
+#             Sound.speak("Colours do not match").wait()
+#             sleep(2)
 
 #################### Start of script ################
-Sound.speak("Starting calibration.")
-sleep(2)
 
-(minRef,maxRef) = calibrate.calibrate(cline)
-# Calibration succeeded.
+# (minRef,maxRef) = calibrate.calibrate(cline)
+(minRef,maxRef) = (7,85)
 
-presentColoredCard()
+###################################################TESTING REACHING BLACK LINE AGAIN + RETURNING########################
+generalPIDRun('timed', power, target, direction, kp, kd, ki, minRef, maxRef, 2)
 
-armM.run_timed(time_sp=600, speed_sp=-200)
-sleep(3)
+from rwJSON import rwJSON
 
-# Move along line of bottles and stop when either the sensor detects the stopping sign or the color sensor detects the
-# correct color.
+leftM.run_direct()
+rightM.run_direct()
+
+writejson = rwJSON()
+
+motorSpeeds = [(30,15),(30,30),(30,15),(30,30), (15,30), (30,15), (15,30), (30,15)]
+
+for (left_sp,right_sp) in motorSpeeds:
+
+    leftM.duty_cycle_sp = left_sp
+    rightM.duty_cycle_sp = right_sp
+
+    startTime = time()
+
+    while(time() < startTime + 1.5):
+        continue
+    writejson.addCommand(left_sp,right_sp,1.5)
+
+writejson.saveCommands('commands')
+
+def goBackUntilLine():
+    commandList = rwJSON.readCommands('commands')
+    index = 0
+    leftM.run_direct()
+    rightM.run_direct()
+    while(cline.value() > 20 and index < len(commandList)):
+        leftM.duty_cycle_sp = -commandList[index]['left_sp']
+        rightM.duty_cycle_sp = -commandList[index]['right_sp']
+        startTime = time()
+        while(time() < startTime + 1.5 * commandList[index]['time']):
+            if(cline.value() < 20):
+                leftM.stop()
+                rightM.stop()
+                break
+        if(cline.value() < 20):
+            leftM.stop()
+            rightM.stop()
+            break
+        else:
+            index += 1
+    if(cline.value() > 20):
+        leftM.stop()
+        rightM.stop()
+        print('goBackUntilLine FAILED')
+    else:
+        generalPIDRun('runUntilStart', power, target, direction, kp, kd, ki, minRef, maxRef, 3, 10, leftM, rightM)
+
+goBackUntilLine()
+
+
+
+
+
+
+
+
+
