@@ -268,8 +268,10 @@ class Camera():
         self.stream_from_camera()
 
         for i in range(10):
-            x = self.stream_and_detect(wantedShape='heart', showStream=False)
+            x = self.stream_and_detect(wantedShape='heart', showStream=self.running_on_pi)
             print(x)
+
+        self.destroy_camera()
 
 cam = Camera()
 cam.demo()
