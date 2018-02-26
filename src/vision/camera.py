@@ -1,6 +1,7 @@
 import sys, time
 from queue import Queue
 from time import sleep
+from multiprocessing import Process, Manager
 import cv2
 import os
 import os.path
@@ -15,16 +16,21 @@ class Camera():
         self.custom_shapes_names = ['triangle','heart', 'circle'] # 'star', 'square', 'cross']
         self.custom_shapes_contours = dict()
         self.cam_id = 0 if self.running_on_pi else 1 # 0 for default camera
-        self.cam_buffer_threshold = 0.015 if self.running_on_pi else 0.00035
+        if self.running_on_pi:
+            self.cam_buffer_threshold = 0.5 # 0.015
+        else:
+            self.cam_buffer_threshold = 0.00035
         self.frame_widths = [160,176,320,352,432,544,640,800,960,1184,1280]
         self.custom_shape_sim_threshold = 0.08
-        
+
         self.look_back_window = 0
         self.previously_seen = Queue(maxsize=max(1, self.look_back_window))
         while not self.previously_seen.full():
             self.previously_seen.put('some strange unidentifiable shape')
 
-        self.camera = self.setup_camera() 
+        self.setup_camera()
+
+        self.multi_thread_dict = Manager().dict()
 
     # Detects polygon with 3, 4, 5 or many sides in passed contour
     def detect_polygon(self, contour):
@@ -88,13 +94,17 @@ class Camera():
         camera.set(cv2.CAP_PROP_CONTRAST, 0.6)
         camera.set(cv2.CAP_PROP_SATURATION, 0.0)
         camera.set(cv2.CAP_PROP_GAIN, 0.0)
-        return camera
+        print("FPS: {}".format(camera.get(cv2.CAP_PROP_FPS)))
 
+        self.camera = camera
 
     # Closes the camera and destroys any graphical windows that 
     # have been generated
     def destroy_camera(self):
+        # time.sleep(0.3)
         self.camera.release()
+        # time.sleep(0.3)
+
         cv2.destroyAllWindows()
 
 
@@ -162,19 +172,32 @@ class Camera():
     # until it hits a fresh image. How it does this: Uses empirical threshold
     # because it takes much longer to fetch image from the camera than it takes
     # to fetch it just from the buffer.
-    def get_fresh_image_from_camera(self, timeToRun=1):
+    def get_fresh_image_from_camera(self, timeToRun=1.0):
         total_start = time.time()
         time_to_fetch = 0
-        img = None
+        self.multi_thread_dict['img'] = None
+        r, i = self.camera.read()
+        #self.destroy_camera()
+        #self.setup_camera()
+        #time.sleep(1)
 
         while time_to_fetch < self.cam_buffer_threshold and time.time() - total_start < timeToRun:
             start = time.time()
-            r, img = self.camera.read()
-            end = time.time()
-            time_to_fetch = end - start
+            img = None
+            self.multi_thread_dict['img'] = None
+            cam_process = Process(target=self.read_from_camera, name="CamProcess", args=(self.multi_thread_dict, 0))
+            cam_process.start()
+            cam_process.join(timeToRun)
+            if cam_process.is_alive():
+                cam_process.terminate()
+            time_to_fetch = time.time() - start
+            print("        ({:.4f})".format(time_to_fetch))
 
-        return img
-
+        return self.multi_thread_dict['img']
+    
+    def read_from_camera(self, return_dict, random_arg=0):
+        _, img = self.camera.read()
+        return_dict['img'] = img
 
     # Returns the X position (absolute, as an int) of the given contour
     # in the image.
@@ -197,7 +220,7 @@ class Camera():
             print("...waiting for {} to appear ({:.3f})...".format(wantedShape, time.time() - start))
             
             # Get fresh image from camera (and don't wait for it more than 1 second)
-            img_raw = self.get_fresh_image_from_camera(timeToRun=1)
+            img_raw = self.get_fresh_image_from_camera(timeToRun=2.0)
 
             # We managed to get an image; continue and process the contours present in it
             if img_raw is not None:
@@ -250,11 +273,13 @@ class Camera():
                 # shapes_really_present = pick_shapes_present_in_stream(custom_shapes)
                 # print("                                         Shapes present: {}".format(shapes_really_present))
 
-            if not continuousStream and time.time() - start > timeToRun:
+            run_time = time.time() - start
+            if not continuousStream and run_time > timeToRun:
                 runAgain = False
-                print("...timing out, {} not spotted :-(...".format(wantedShape))
+                print("...timing out ({:.3f}), {} not spotted :-(...".format(run_time, wantedShape))
             else:
-                sleep(0.1)
+                # sleep(0.1)
+                pass
 
         return x_coordinate
 
@@ -267,11 +292,12 @@ class Camera():
 
         self.stream_from_camera()
 
-        for i in range(10):
-            x = self.stream_and_detect(wantedShape='heart', showStream=self.running_on_pi)
-            print(x)
-
+        for i in range(15):
+            x = self.stream_and_detect(wantedShape='heart', showStream=False)
+            print("Position of heart: {}px.".format(x))
         self.destroy_camera()
 
+#for i in range(10):
+   # print("#####################################  {}  ###########".format(i))
 cam = Camera()
 cam.demo()
