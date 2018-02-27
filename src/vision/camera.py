@@ -62,19 +62,21 @@ class Camera():
     # Detects any custom (loaded from files) shapes in passed contour
     def detect_custom_shape(self, contour_unknown):
         similarities = dict()
-        
+
         for n, c_shape in self.custom_shapes_contours.items():
             sim = cv2.matchShapes(contour_unknown, c_shape, cv2.CONTOURS_MATCH_I1, 0.0)
             similarities[n] = sim
 
+        # print(similarities)
+
         sim_values = similarities.values()
         min_sim = min(sim_values)
         if min_sim > self.custom_shape_sim_threshold:
-            return None
+            return -10000, None
         else:
             for n, s in similarities.items():
                 if s == min_sim:
-                    return n
+                    return s*-1, n
 
 
     # Returns a camera object with all important parameters set 
@@ -206,6 +208,34 @@ class Camera():
         x_coordinate = int(moments['m10']/moments['m00'])
         return x_coordinate
 
+    def get_contours(self, img):
+        # Pre-process the image
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        img = cv2.GaussianBlur(img, (5, 5), 0)
+        (thresh, img) = cv2.threshold(img, 60, 255, cv2.THRESH_BINARY_INV)
+        
+        # Find all contours in the image
+        img, contours, hierarchy = cv2.findContours(img, 
+            cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        return contours
+
+    def draw_contour(self, img, contour, label=None):
+        # Draw the filled contours into the original image
+        ratio = 1
+        M = cv2.moments(contour)
+        
+        if M["m00"] != 0:
+            cX = int((M["m10"] / M["m00"]) * ratio)
+            cY = int((M["m01"] / M["m00"]) * ratio)
+            
+            img = cv2.drawContours(img, [contour], -1, (0, 255, 0), 1)
+            
+            if label:
+                img = cv2.putText(img, label, (cX, cY), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+
+        return img
 
     # Processes the camera stream, looking for the specified shape. Can be restricted
     # to only run for a maximum of timeToRun seconds and then return None if the desired
@@ -217,7 +247,11 @@ class Camera():
 
         # Processes the live stream, for every snapshot detecting the shapes.
         while runAgain:
-            print("...waiting for {} to appear ({:.3f})...".format(wantedShape, time.time() - start))
+            x_coordinate = None
+            max_weight = -10000
+            best_contour = None
+
+            print("...waiting for {} ({:.3f})...".format(wantedShape, time.time() - start))
             
             # Get fresh image from camera (and don't wait for it more than 1 second)
             img_raw = self.get_fresh_image_from_camera(timeToRun=2.0)
@@ -226,52 +260,28 @@ class Camera():
             if img_raw is not None:
                 img_labelled = img_raw
 
-                # Pre-process the image
-                img = cv2.cvtColor(img_raw, cv2.COLOR_BGR2GRAY)
-                img = cv2.GaussianBlur(img, (5, 5), 0)
-                (thresh, img) = cv2.threshold(img, 60, 255, cv2.THRESH_BINARY_INV)
-                
-                # Find all contours in the image
-                img, contours, hierarchy = cv2.findContours(img, 
-                    cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+                contours = self.get_contours(img_raw)
 
                 # Loop through found contours and try detecting those 
                 # that resemble custom shapes or polygons.
-                for c in contours:            
+                for c in contours:         
                     # Detect and remember all detected shapes
-                    custom_shape_label = self.detect_custom_shape(c)
+                    weight, custom_shape_label = self.detect_custom_shape(c)
 
                     if showStream:
-                        # Draw the filled contours into the original image
-                        ratio = 1
-                        M = cv2.moments(c)
-                        if M["m00"] != 0:
-                            cX = int((M["m10"] / M["m00"]) * ratio)
-                            cY = int((M["m01"] / M["m00"]) * ratio)
-                            
-                            img_labelled = cv2.drawContours(img_raw, [c], -1, (0, 255, 0), 1)
-                            
-                            if custom_shape_label:
-                                img_labelled = cv2.putText(img_labelled, custom_shape_label, (cX, cY), 
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+                        img_labelled = self.draw_contour(img_raw, c, custom_shape_label)
 
-                    if custom_shape_label == wantedShape:
+                    if custom_shape_label == wantedShape and weight > max_weight:
                         x_coordinate = self.get_x_position_of_contour(c)
-                        runAgain = False
-                        print("...{} found!...".format(wantedShape))
-                        break
+                        max_weight = weight
+                        best_contour = c
                 
-                if showStream:
+                if showStream and best_contour is not None:
                     # Show the captured image with added shape contours 
                     # and possibly shape labels as well
                     cv2.imshow("Image", img_labelled)
                     if cv2.waitKey(1) & 0xFF == ord('q'):
                         break
-
-                # See in command line what we've found (less resource-intensive 
-                # alternative of showing the contours and labels in the original image)
-                # shapes_really_present = pick_shapes_present_in_stream(custom_shapes)
-                # print("                                         Shapes present: {}".format(shapes_really_present))
 
             run_time = time.time() - start
             if not continuousStream and run_time > timeToRun:
@@ -294,7 +304,10 @@ class Camera():
 
         for i in range(15):
             x = self.stream_and_detect(wantedShape='heart', showStream=False)
-            print("Position of heart: {}px.".format(x))
+            if x:
+                print("Position of heart: {}px.".format(x))
+            else:
+                print(":-(")
         self.destroy_camera()
 
 #for i in range(10):
