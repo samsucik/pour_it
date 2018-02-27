@@ -310,7 +310,5 @@ class Camera():
                 print(":-(")
         self.destroy_camera()
 
-#for i in range(10):
-   # print("#####################################  {}  ###########".format(i))
-cam = Camera()
-cam.demo()
+# cam = Camera()
+# cam.demo()
