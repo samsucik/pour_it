@@ -1,9 +1,9 @@
 # !/usr/bin/env python3
 from time import time, sleep
-import ev3dev.ev3 as ev3
-# import rpyc
-# conn = rpyc.classic.connect('ev3dev') #host name or IP address of EV3
-# ev3 = conn.modules['ev3dev.ev3'] #import ev3dev.ev3
+# import ev3dev.ev3 as ev3
+import rpyc
+conn = rpyc.classic.connect('ev3dev') #host name or IP address of EV3
+ev3 = conn.modules['ev3dev.ev3'] #import ev3dev.ev3
 import calibrate
 
 # Steering2 and the original version of "run" have been taken from: https://github.com/Klabbedi/ev3/blob/master/README.md.
@@ -11,11 +11,11 @@ import calibrate
 ############################# SETUP + VARIABLES ########################################################################
 # Motors setup.
 #armM = MedsiumMotor('outA')
-leftM = ev3.LargeMotor('outD')
+leftM = ev3.LargeMotor('outB')
 rightM = ev3.LargeMotor('outA')
 
 # Color sensor for following the line.
-cline = ev3.ColorSensor('in2')
+cline = ev3.ColorSensor('in4')
 cline.mode = 'COL-REFLECT'
 
 # Color sensor for detecting colored card + correct bottle.
@@ -23,7 +23,7 @@ cline.mode = 'COL-REFLECT'
 #carm.mode = 'COL-COLOR'
 
 # Ultrasonic sensor for detecting the beginning and end of the track.
-uhead = ev3.UltrasonicSensor('in4')
+uhead = ev3.UltrasonicSensor('in1')
 
 # Time for the robot to make the turn at the end (ultrasonic sensor's detection is paused during this time).
 time_for_turn = 7
@@ -263,7 +263,6 @@ def run(power, target, kp, kd, ki, direction, minRef, maxRef):
     leftM.stop()
     rightM.stop()
 
-
 # Method for setting bottle_col.
 # def presentColoredCard():
 #     sleep(2)
@@ -303,11 +302,11 @@ def run(power, target, kp, kd, ki, direction, minRef, maxRef):
 
 #################### Start of script ################
 
-# (minRef,maxRef) = calibrate.calibrate(cline)
-#(minRef,maxRef) = (10,73)
+(minRef,maxRef) = calibrate.calibrate(cline)
+(minRef,maxRef) = (10,73)
 
 ###################################################TESTING REACHING BLACK LINE AGAIN + RETURNING########################
-#run(power, target, kp, kd, ki, direction, minRef, maxRef)
+run(power, target, kp, kd, ki, direction, minRef, maxRef)
 #
 # from rwJSON import rwJSON
 #
