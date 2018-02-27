@@ -22,7 +22,7 @@ class rwJSON:
         filenamex = filename
         if(not filename.endswith('.json')):
             filenamex = filename + '.json'
-        pathx = path + filename
+        pathx = path + filenamex
         with open(pathx, 'w') as f:
             json.dump(self.dict, f)
             print('Values successfully saved')
