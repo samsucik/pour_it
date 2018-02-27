@@ -10,18 +10,20 @@ class rwJSON:
 
     # This function should be called after each call to the motors.
     # Time should be the time the motors run for (at the specified speeds).
-    def addCommand(self, motorA, motorB, time):
+    def addCommand(self, left_sp, right_sp, time):
         auxdict = {}
-        auxdict['motorA'] = motorA
-        auxdict['motorB'] = motorB
+        auxdict['left_sp'] = left_sp
+        auxdict['right_sp'] = right_sp
         auxdict['time']   = time
         self.dict['commands'].append(auxdict)
 
     # Saves the added values to a .json file (named after the second argument).
-    def saveCommands(self, filename):
+    def saveCommands(self, filename, path=''):
+        filenamex = filename
         if(not filename.endswith('.json')):
-            filename = filename + '.json'
-        with open(filename, 'w') as f:
+            filenamex = filename + '.json'
+        pathx = path + filenamex
+        with open(pathx, 'w') as f:
             json.dump(self.dict, f)
             print('Values successfully saved')
 
