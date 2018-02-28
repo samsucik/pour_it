@@ -3,19 +3,19 @@ from queue import Queue
 from time import sleep
 from multiprocessing import Process, Manager
 import cv2
-import os
-import os.path
+import os, os.path
 
 class Camera():
 
     def __init__(self):
         self.running_on_pi = os.getcwd().startswith('/home/pi')
+        self.running_on_dice = os.getcwd().startswith('/afs/inf.ed.ac.uk')
         self.cam_fps = 10.0
         self.cam_width = 160
         self.cam_height = 120
         self.custom_shapes_names = ['triangle','heart', 'circle'] # 'star', 'square', 'cross']
         self.custom_shapes_contours = dict()
-        self.cam_id = 0 if self.running_on_pi else 1 # 0 for default camera
+        self.cam_id = 0 if self.running_on_pi or self.running_on_dice else 1 # 0 for default camera
         if self.running_on_pi:
             self.cam_buffer_threshold = 0.5 # 0.015
         else:
@@ -67,7 +67,7 @@ class Camera():
             sim = cv2.matchShapes(contour_unknown, c_shape, cv2.CONTOURS_MATCH_I1, 0.0)
             similarities[n] = sim
 
-        sim_values = similarities.values()
+        sim_values = similarities.values() if len(similarities) > 0 else [10000]
         min_sim = min(sim_values)
         if min_sim > self.custom_shape_sim_threshold:
             return -10000, None
@@ -187,7 +187,7 @@ class Camera():
             if cam_process.is_alive():
                 cam_process.terminate()
             time_to_fetch = time.time() - start
-            print("        ({:.4f})".format(time_to_fetch))
+            # print("        ({:.4f})".format(time_to_fetch))
 
         return self.multi_thread_dict['img']
     
@@ -299,6 +299,16 @@ class Camera():
         return x_coordinate
 
 
+    def read_shape_from_card(self):
+        img = self.get_fresh_image_from_camera(timeToRun=2.0)
+        if img is not None:
+            contours = self.get_contours(img)
+            _, label = self.find_most_salient_contour(contours)
+            return label
+        else:
+            return None
+
+
     # Simple showcase of what this class can do.
     def demo(self):
         self.capture_custom_shapes()
@@ -317,4 +327,9 @@ class Camera():
 
 if __name__ == "__main__":
     cam = Camera()
-    cam.demo()
+    cam.load_custom_shapes()
+    
+    shape = None
+    while shape is None:
+        shape = cam.read_shape_from_card()
+    print(shape)
