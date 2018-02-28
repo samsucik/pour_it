@@ -84,3 +84,13 @@ class turn_to_bottle:
         self.rightM.run_timed(time_sp=100, speed_sp=int(speed_rightM ))
         self.leftM.run_timed(time_sp=100, speed_sp=int(speed_leftM ))
 
+    def adjust_angle(self, cam):
+        for i in range(200):
+            x = cam.stream_and_detect(wantedShape='circle', showStream=True, continuousStream=False, timeToRun=1)
+            if x is not None:
+                self.turn_once(x)
+            print("X: " + str(x))
+
+            if x in [80]:
+                print("broke")
+                break
