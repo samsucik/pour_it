@@ -15,7 +15,7 @@ class Camera():
         self.cam_height = 120
         self.custom_shapes_names = ['triangle','heart', 'circle'] # 'star', 'square', 'cross']
         self.custom_shapes_contours = dict()
-        self.cam_id = 0 if self.running_on_pi else 1 # 0 for default camera
+        self.cam_id = 0 if self.running_on_pi or os.getcwd().startswith('/afs') else 1 # 0 for default camera
         if self.running_on_pi:
             self.cam_buffer_threshold = 0.5 # 0.015
         else:
