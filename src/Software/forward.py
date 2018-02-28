@@ -1,9 +1,9 @@
 # !/usr/bin/env python3
 from time import time, sleep
-# import ev3dev.ev3 as ev3
-import rpyc
-conn = rpyc.classic.connect('ev3dev') #host name or IP address of EV3
-ev3 = conn.modules['ev3dev.ev3'] #import ev3dev.ev3
+import ev3dev.ev3 as ev3
+#import rpyc
+#conn = rpyc.classic.connect('ev3dev') #host name or IP address of EV3
+#ev3 = conn.modules['ev3dev.ev3'] #import ev3dev.ev3
 import calibrate
 
 # Steering2 and the original version of "run" have been taken from: https://github.com/Klabbedi/ev3/blob/master/README.md.
@@ -38,15 +38,22 @@ minRef = 4
 maxRef = 77
 
 # % of white we want as the target (for the PID controller's error calculation).
-target = 70
+target = 60
 
 # PID controller parameters (need to be re-tuned if the robot changes drastically in the future demos).
+#kd =1 , ki=0 kp=0,
 # kp = float(2)
 # kd = 1
 # ki = float(0.5)
+
 kp = float(0.7)
 ki = float(0.6)
-kd = 4
+kd = float(4)
+
+# kp = float(0.35)
+# ki = float(0.04)
+# kd = 2
+
 
 # -1 if the robot will follow the left side of the black line, 1 otherwise (part of the PID controller).
 direction = -1
@@ -57,6 +64,10 @@ bottle_col = 0
 # End of the line minimum distance (cm) between ultrasonic sensor and margin of our workspace.
 stop_dist_first = 32
 stop_dist_second = 5
+
+waiting_time = 3
+stop_dist_cm = 13
+mode = 'runUntilStart'
 
 # Dictionary for PID modes:
 mode_PID = {}
@@ -174,32 +185,30 @@ def timedCondition(args):
 
 ##################NEXT 2 CONDITIONS SHOULD BE REWRITTEN IF NEEDED##################################################
 
-# args[0] = waiting_time, args[1] = minDist, args[2] = leftM, args[3] = rightM
+# args[0] = waiting_time, args[1] = min_dist, args[2] = leftM, args[3] = rightM
 def runUntilStartCondition(args):
-    if(uhead.distance_centimeters < args[1]):
+    if(uhead.distance_centimeters <= args[1]):
         args[2].stop()
         args[3].stop()
-        sleep(args[0])
-        if(uhead.distance_centimeters < args[1]):
-            return 0
-        else:
-            args[2].run_direct()
-            args[3].run_direct()
-            return 1
+        start_time = time()
+        while(time() < start_time + args[0]):
+            if(uhead.distance_centimeters > args[1]):
+                args[2].run_direct()
+                args[3].run_direct()
+                return 0
+        return 1
     elif(btn.any()):
-        return 0
-    else:
         return 2
+    else:
+        return 0
 
 def createPIDmodes():
-    mode_PID['timed'] = timedCondition
     mode_PID['runUntilStart'] = runUntilStartCondition
 
 # mode and params:
 # 'timed' -> args[0] = time() + amount of time you want it to run for.
-#
+
 def generalPIDRun(mode, power, target, direction, kp, kd, ki, minRef, maxRef, *args, **kwargs):
-    print('FML')
 
     createPIDmodes()
 
@@ -208,8 +217,8 @@ def generalPIDRun(mode, power, target, direction, kp, kd, ki, minRef, maxRef, *a
     # This mode will allow us to change the speed of the motors immediately.
     leftM.run_direct()
     rightM.run_direct()
-
-    while(not mode_PID[mode](args)):
+    returnVal = 0
+    while(not returnVal):
         refRead = cline.value()
 
         # Calculate the current error and its derivative.
@@ -230,18 +239,21 @@ def generalPIDRun(mode, power, target, direction, kp, kd, ki, minRef, maxRef, *a
         for (motor, pow) in zip((leftM, rightM), steering2(course, power)):
             motor.duty_cycle_sp = pow
         sleep(0.01)  # Approx 100Hz
+        returnVal = mode_PID[mode](args)
 
     leftM.stop()
     rightM.stop()
 
-    return 0
+    return returnVal
 
 def run(power, target, kp, kd, ki, direction, minRef, maxRef):
     lastError = error = integral = 0
     leftM.run_direct()
     rightM.run_direct()
-    end_time = time() + 4
+    start_time = time()
     while (not btn.any()):
+        checkpoint_time = time()
+
         refRead = cline.value()
 
         # Is it ok if refRead-minRef will be negative?
@@ -255,11 +267,13 @@ def run(power, target, kp, kd, ki, direction, minRef, maxRef):
         else:
             integral = float(0.5) * integral + error
 
-
         course = (kp * error + kd * derivative + ki * integral) * direction
         for (motor, pow) in zip((leftM, rightM), steering2(course, power)):
             motor.duty_cycle_sp = pow
-        sleep(0.01)  # Aprox 100Hz
+        sleep(0.05)
+        print(time() - checkpoint_time)
+
+
     leftM.stop()
     rightM.stop()
 
@@ -293,7 +307,7 @@ def run(power, target, kp, kd, ki, direction, minRef, maxRef):
 #         if confirm_val == usr_col:
 #             ev3.Sound.speak("Colours match")
 #             global bottle_col
-#             bottle_col = confirm_val # set color of bottle that needs to be found
+#             bottle_colgeneralPIDRun(mode,power,target,kp,kd,ki,minRef,maxRef,waiting_time,stop_dist_cm,leftM,rightM) = confirm_val # set color of bottle that needs to be found
 #             sleep(2.5)
 #             break
 #         else:
@@ -302,12 +316,17 @@ def run(power, target, kp, kd, ki, direction, minRef, maxRef):
 
 #################### Start of script ################
 
-(minRef,maxRef) = calibrate.calibrate(cline)
-(minRef,maxRef) = (10,73)
+# (minRef,maxRef) = calibrate.calibrate(cline)
+(minRef,maxRef) = (10, 86)
 
 ###################################################TESTING REACHING BLACK LINE AGAIN + RETURNING########################
-run(power, target, kp, kd, ki, direction, minRef, maxRef)
-#
+val = generalPIDRun(mode,power,target,direction,kp,kd,ki,minRef,maxRef,waiting_time,stop_dist_cm,leftM,rightM)
+if(val == 1):
+    ev3.Sound.speak('Robot stopped due to obstacle')
+else:
+    ev3.Sound.speak('Robot stopped due to button press')
+# run(power, target, kp, kd, ki, direction, minRef, maxRef)
+
 # from rwJSON import rwJSON
 #
 # writejson = rwJSON()
