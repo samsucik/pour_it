@@ -13,7 +13,7 @@ class Camera():
         self.cam_fps = 10.0
         self.cam_width = 160
         self.cam_height = 120
-        self.custom_shapes_names = ['triangle', 'heart', 'circle', 'star', 'square', 'cross']
+        self.custom_shapes_names = ['triangle', 'heart', 'circle', 'star'] #, 'square', 'cross']
         self.custom_shapes_contours = dict()
         self.cam_id = 0 if self.running_on_pi or self.running_on_dice else 1 # 0 for default camera
         if self.running_on_pi:
@@ -350,7 +350,7 @@ if __name__ == "__main__":
     cam = Camera()
     cam.load_custom_shapes()
 
-    # cam.demo()   
+    # cam.demo()
 
     # cam.stream_from_camera()
 
