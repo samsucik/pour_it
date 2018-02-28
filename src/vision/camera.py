@@ -13,7 +13,7 @@ class Camera():
         self.cam_fps = 10.0
         self.cam_width = 160
         self.cam_height = 120
-        self.custom_shapes_names = ['triangle','heart', 'circle'] # 'star', 'square', 'cross']
+        self.custom_shapes_names = ['triangle', 'heart', 'circle', 'star', 'square', 'cross']
         self.custom_shapes_contours = dict()
         self.cam_id = 0 if self.running_on_pi or self.running_on_dice else 1 # 0 for default camera
         if self.running_on_pi:
@@ -219,6 +219,9 @@ class Camera():
 
 
     def draw_contour(self, img, contour, label=None):
+        if contour is None:
+            return img
+            
         # Draw the filled contours into the original image
         ratio = 1
         M = cv2.moments(contour)
@@ -280,14 +283,15 @@ class Camera():
                 if best_contour is not None:
                     x_coordinate = self.get_x_position_of_contour(best_contour)
                 
-                    if showStream:
-                        img = self.draw_contour(img, best_contour, wantedShape)
-                        # Show the captured image with added shape contours 
-                        # and possibly shape labels as well
-                        cv2.imshow("Image", img)
-                        if cv2.waitKey(1) & 0xFF == ord('q'):
-                            break
+                if showStream:
+                    img = self.draw_contour(img, best_contour, wantedShape)
+                    # Show the captured image with added shape contours 
+                    # and possibly shape labels as well
+                    cv2.imshow("Image", img)
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
 
+                if best_contour is not None:
                     return x_coordinate
 
             run_time = time.time() - start
@@ -317,19 +321,39 @@ class Camera():
         # self.stream_from_camera()
 
         for i in range(35):
-            x = self.stream_and_detect(wantedShape='heart', showStream=False)
+            x = self.stream_and_detect(wantedShape='heart', showStream=True)
             if x:
                 print("Position of heart: {}px.".format(x))
             else:
                 print(":-(")
         self.destroy_camera()
 
+    def read_shapes_for_confmtrx(self, distance):
+        with open("shapes_" + str(distance) + "cm.txt", "w") as f:
+            for i in range(2):
+                for name in self.custom_shapes_names:
+                    print("scanning {} in {}".format(name, 3))
+                    sleep(1)
+                    print("scanning {} in {}".format(name, 2))
+                    sleep(1)
+                    print("scanning {} in {}".format(name, 1))
+                    sleep(1)
+                    shape = None
+                    while shape is None:
+                        shape = cam.read_shape_from_card()
+                    f.write(name + "," + shape + "\n")
 
 if __name__ == "__main__":
     cam = Camera()
     cam.load_custom_shapes()
+
+    cam.demo()    
+
+    # cam.stream_from_camera()
+
+    # shape = None
+    # while shape is None:
+    #     shape = cam.read_shape_from_card()
+    # print(shape)
     
-    shape = None
-    while shape is None:
-        shape = cam.read_shape_from_card()
-    print(shape)
+    cam.read_shapes_for_confmtrx(10)

@@ -1,0 +1,6 @@
+triangle,star
+heart,star
+circle,triangle
+star,square
+square,circle
+cross,cross
