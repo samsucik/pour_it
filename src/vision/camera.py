@@ -91,7 +91,7 @@ class Camera():
         camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.cam_width)
         camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cam_height)
         camera.set(cv2.CAP_PROP_FPS, self.cam_fps)
-        camera.set(cv2.CAP_PROP_CONTRAST, 0.6)
+        camera.set(cv2.CAP_PROP_CONTRAST, 0.7)
         camera.set(cv2.CAP_PROP_SATURATION, 0.0)
         camera.set(cv2.CAP_PROP_GAIN, 0.0)
 
@@ -215,13 +215,13 @@ class Camera():
         img, contours, hierarchy = cv2.findContours(img, 
             cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-        return contours
+        return contours, img
 
 
     def draw_contour(self, img, contour, label=None):
         if contour is None:
             return img
-            
+
         # Draw the filled contours into the original image
         ratio = 1
         M = cv2.moments(contour)
@@ -277,7 +277,7 @@ class Camera():
 
             # We managed to get an image; continue and process the contours present in it
             if img is not None:
-                contours = self.get_contours(img)
+                contours, img = self.get_contours(img)
                 best_contour, _ = self.find_most_salient_contour(contours, wantedShape)
                 
                 if best_contour is not None:
@@ -291,7 +291,7 @@ class Camera():
                     if cv2.waitKey(1) & 0xFF == ord('q'):
                         break
 
-                if best_contour is not None:
+                if best_contour is not None and not continuousStream:
                     return x_coordinate
 
             run_time = time.time() - start
@@ -306,7 +306,7 @@ class Camera():
     def read_shape_from_card(self):
         img = self.get_fresh_image_from_camera(timeToRun=2.0)
         if img is not None:
-            contours = self.get_contours(img)
+            contours, _ = self.get_contours(img)
             _, label = self.find_most_salient_contour(contours)
             return label
         else:
@@ -321,7 +321,7 @@ class Camera():
         # self.stream_from_camera()
 
         for i in range(35):
-            x = self.stream_and_detect(wantedShape='heart', showStream=True)
+            x = self.stream_and_detect(wantedShape='heart', showStream=True, continuousStream=True)
             if x:
                 print("Position of heart: {}px.".format(x))
             else:
@@ -330,7 +330,7 @@ class Camera():
 
     def read_shapes_for_confmtrx(self, distance):
         with open("shapes_" + str(distance) + "cm.txt", "w") as f:
-            for i in range(2):
+            for i in range(3):
                 for name in self.custom_shapes_names:
                     print("scanning {} in {}".format(name, 3))
                     sleep(1)
@@ -338,16 +338,19 @@ class Camera():
                     sleep(1)
                     print("scanning {} in {}".format(name, 1))
                     sleep(1)
+                    shapeCounter = 0
                     shape = None
-                    while shape is None:
+                    while shapeCounter < 5:
                         shape = cam.read_shape_from_card()
+                        if shape is not None:
+                            shapeCounter += 1
                     f.write(name + "," + shape + "\n")
 
 if __name__ == "__main__":
     cam = Camera()
     cam.load_custom_shapes()
 
-    cam.demo()    
+    # cam.demo()   
 
     # cam.stream_from_camera()
 
@@ -356,4 +359,4 @@ if __name__ == "__main__":
     #     shape = cam.read_shape_from_card()
     # print(shape)
     
-    cam.read_shapes_for_confmtrx(10)
+    cam.read_shapes_for_confmtrx(30)
