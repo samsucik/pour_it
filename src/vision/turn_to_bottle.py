@@ -53,7 +53,6 @@ class turn_to_bottle:
         else:
             speed_rightM = self.base_speed + (force*self.turn_speed_boost)
 
-
         self.rightM.run_timed(speed_sp=speed_rightM, time_sp=200)
         self.leftM.run_timed(speed_sp=speed_leftM, time_sp=200)
         self.leftm.append(speed_leftM)
@@ -84,13 +83,15 @@ class turn_to_bottle:
         self.rightM.run_timed(time_sp=100, speed_sp=int(speed_rightM ))
         self.leftM.run_timed(time_sp=100, speed_sp=int(speed_leftM ))
 
-    def adjust_angle(self, cam):
-        for i in range(200):
-            x = cam.stream_and_detect(wantedShape='circle', showStream=True, continuousStream=False, timeToRun=1)
+    def adjust_angle(self, cam, shape):
+        # change to finite loop
+        while True:
+            x = cam.stream_and_detect(wantedShape=shape, showStream=True, continuousStream=False, timeToRun=1.0)
             if x is not None:
                 self.turn_once(x)
             print("X: " + str(x))
 
+            # values at which the robot will think its facing bottle directly, 80 is centre
             if x in [80]:
                 print("broke")
                 break
