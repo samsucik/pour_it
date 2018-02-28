@@ -265,6 +265,7 @@ class Camera():
         start = time.time()
         runAgain = True
         x_coordinate = None
+        height = None
 
         # Processes the live stream, for every snapshot detecting the shapes.
         while runAgain:
@@ -282,17 +283,20 @@ class Camera():
                 
                 if best_contour is not None:
                     x_coordinate = self.get_x_position_of_contour(best_contour)
-                
+                    height = self.get_contour_height(best_contour)
+
+
                 if showStream:
                     img = self.draw_contour(img, best_contour, wantedShape)
                     # Show the captured image with added shape contours 
                     # and possibly shape labels as well
+                    print("Height: {}px".format(self.get_contour_height(best_contour)))
                     cv2.imshow("Image", img)
                     if cv2.waitKey(1) & 0xFF == ord('q'):
                         break
 
                 if best_contour is not None and not continuousStream:
-                    return x_coordinate
+                    return x_coordinate, height
 
             run_time = time.time() - start
             if not continuousStream and run_time > timeToRun:
@@ -300,7 +304,7 @@ class Camera():
                 print("...timing out ({:.3f}), {} not spotted :-(...".format(run_time, wantedShape))
             else:
                 pass
-        return x_coordinate
+        return x_coordinate, height
 
 
     def read_shape_from_card(self):
@@ -313,6 +317,11 @@ class Camera():
             return None
 
 
+    def get_contour_height(self, contour):
+        x, y, w, h = cv2.boundingRect(contour)
+        return h
+
+
     # Simple showcase of what this class can do.
     def demo(self):
         self.capture_custom_shapes()
@@ -321,7 +330,7 @@ class Camera():
         # self.stream_from_camera()
 
         for i in range(35):
-            x = self.stream_and_detect(wantedShape='heart', showStream=True, continuousStream=True)
+            x, _ = self.stream_and_detect(wantedShape='heart', showStream=True, continuousStream=True)
             if x:
                 print("Position of heart: {}px.".format(x))
             else:
@@ -350,7 +359,7 @@ if __name__ == "__main__":
     cam = Camera()
     cam.load_custom_shapes()
 
-    # cam.demo()
+    cam.demo()
 
     # cam.stream_from_camera()
 
@@ -359,4 +368,4 @@ if __name__ == "__main__":
     #     shape = cam.read_shape_from_card()
     # print(shape)
     
-    cam.read_shapes_for_confmtrx(30)
+    # cam.read_shapes_for_confmtrx(30)
