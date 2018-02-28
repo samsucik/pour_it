@@ -12,12 +12,14 @@ class turn_to_bottle:
     def __init__(self):
         self.leftM = ev3.LargeMotor('outB')
         self.rightM = ev3.LargeMotor('outA')
+        self.cline = ev3.ColorSensor('in4')
+        self.cline.mode = 'COL-REFLECT'
         self.leftM.run_direct()
         self.rightM.run_direct()
         self.ultrasonic = ev3.UltrasonicSensor()
         self.camera_aspect_width = 160
         self.base_speed = 0
-        self.turn_speed_boost = 100
+        self.turn_speed_boost = 50
         self.leftm = []
         self.rightm = []
 
@@ -74,10 +76,14 @@ class turn_to_bottle:
         speed_rightM = 0
         speed_leftM = 0
         if x_coord <= self.camera_aspect_width/2:
-            speed_rightM = self.base_speed + ( (diff**(0.25))*self.turn_speed_boost)
+            speed_rightM = self.base_speed + ( (diff**(0.30))*self.turn_speed_boost)
+            if speed_rightM < 80:
+                speed_rightM =80
             print("speed Left: " + str(speed_rightM))
         else:
-            speed_leftM = self.base_speed + ( (diff**(0.25))*self.turn_speed_boost)
+            speed_leftM = self.base_speed + ( (diff**(0.30))*self.turn_speed_boost)
+            if speed_leftM < 80:
+                speed_leftM = 80
             print("speed right: " + str(speed_leftM))
 
         self.rightM.run_timed(time_sp=100, speed_sp=int(speed_rightM ))
@@ -95,3 +101,17 @@ class turn_to_bottle:
             if x in [80]:
                 print("broke")
                 break
+
+    def goBackUntilLine(self, motors_power, break_value):
+        # self.leftM.run_direct()
+        # self.rightM.run_direct()
+        # self.leftM.duty_cycle_sp = -motors_power
+        # self.rightM.duty_cycle_sp = -motors_power]
+        self.leftM.run_forever(speed_sp=-motors_power)
+        self.rightM.run_forever(speed_sp=-motors_power)
+        while True:
+            start_time = time()
+            if self.cline.value() <= break_value:
+                break
+            print('goBackUntilLine loop: ' + str(time() - start_time))
+            print(self.cline.value())
