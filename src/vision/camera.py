@@ -30,7 +30,24 @@ class Camera():
 
         self.setup_camera()
 
-        self.multi_thread_dict = Manager().dict()
+        self.multi_thread_dict = dict()
+
+
+    def setup_multithreading(self):
+        if self.multi_thread_dict is None:
+            self.multi_thread_dict = Manager().dict()
+
+
+    def check_camera(self):
+        while not self.camera:
+            print("Camera not found, setting it up")
+            self.setup_camera()
+
+        while not self.camera.isOpened():
+            print("Camera not opened, opening it up")
+            self.camera.open(self.cam_id)
+
+        print("{}x{}".format(self.camera.get(cv2.CAP_PROP_FRAME_WIDTH), self.camera.get(cv2.CAP_PROP_FRAME_HEIGHT)))
 
     # Detects polygon with 3, 4, 5 or many sides in passed contour
     def detect_polygon(self, contour):
@@ -80,22 +97,20 @@ class Camera():
     # Returns a camera object with all important parameters set 
     # (resolution, FPS, contrast, B&W, etc)
     def setup_camera(self):
-        camera = cv2.VideoCapture(self.cam_id)
-            
-        if not(camera.isOpened()):
-            camera.open(self.cam_id)
+        self.camera = cv2.VideoCapture(self.cam_id)
+        
+        self.check_camera()
 
         # Property codes from here:
         # https://docs.opencv.org/2.4/modules/highgui/doc/reading_and_writing_images_and_video.html#videocapture-set
         # REMEMBER to REMOVE the 'CV_' prefix
-        camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.cam_width)
-        camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cam_height)
-        camera.set(cv2.CAP_PROP_FPS, self.cam_fps)
-        camera.set(cv2.CAP_PROP_CONTRAST, 0.7)
-        camera.set(cv2.CAP_PROP_SATURATION, 0.0)
-        camera.set(cv2.CAP_PROP_GAIN, 0.0)
+        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.cam_width)
+        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cam_height)
+        self.camera.set(cv2.CAP_PROP_FPS, self.cam_fps)
+        self.camera.set(cv2.CAP_PROP_CONTRAST, 0.7)
+        self.camera.set(cv2.CAP_PROP_SATURATION, 0.0)
+        self.camera.set(cv2.CAP_PROP_GAIN, 0.0)
 
-        self.camera = camera
 
     # Closes the camera and destroys any graphical windows that 
     # have been generated
@@ -171,23 +186,32 @@ class Camera():
     # until it hits a fresh image. How it does this: Uses empirical threshold
     # because it takes much longer to fetch image from the camera than it takes
     # to fetch it just from the buffer.
-    def get_fresh_image_from_camera(self, timeToRun=1.0):
+    def get_fresh_image_from_camera(self, timeToRun=1.0, multiThread=True):
+        self.check_camera()
+
         total_start = time.time()
         time_to_fetch = 0
         self.multi_thread_dict['img'] = None
-        r, i = self.camera.read()
+        
+        if multiThread:
+            r, i = self.camera.read()
 
         while time_to_fetch < self.cam_buffer_threshold and time.time() - total_start < timeToRun:
             start = time.time()
             img = None
             self.multi_thread_dict['img'] = None
-            cam_process = Process(target=self.read_from_camera, name="CamProcess", args=(self.multi_thread_dict, 0))
-            cam_process.start()
-            cam_process.join(timeToRun)
-            if cam_process.is_alive():
-                cam_process.terminate()
+            
+            if multiThread:
+                cam_process = Process(target=self.read_from_camera, name="CamProcess", args=(self.multi_thread_dict, 0))
+                cam_process.start()
+                cam_process.join(timeToRun)
+                if cam_process.is_alive():
+                    cam_process.terminate()
+            else:
+                self.read_from_camera(self.multi_thread_dict)
+
             time_to_fetch = time.time() - start
-            # print("        ({:.4f})".format(time_to_fetch))
+            print("        ({:.4f})".format(time_to_fetch))
 
         return self.multi_thread_dict['img']
     
@@ -261,11 +285,14 @@ class Camera():
     # Processes the camera stream, looking for the specified shape. Can be restricted
     # to only run for a maximum of timeToRun seconds and then return None if the desired
     # shape was not detected.
-    def stream_and_detect(self, wantedShape, showStream=False, continuousStream=False, timeToRun=1.0):
+    def stream_and_detect(self, wantedShape, showStream=False, continuousStream=False, timeToRun=1.0, multiThread=True):
         start = time.time()
         runAgain = True
         x_coordinate = None
         height = None
+
+        if multiThread:
+            self.setup_multithreading()
 
         # Processes the live stream, for every snapshot detecting the shapes.
         while runAgain:
@@ -274,7 +301,7 @@ class Camera():
             print("...waiting for {} ({:.3f})...".format(wantedShape, time.time() - start))
             
             # Get fresh image from camera (and don't wait for it more than 1 second)
-            img = self.get_fresh_image_from_camera(timeToRun=2.0)
+            img = self.get_fresh_image_from_camera(timeToRun=2.0, multiThread=multiThread)
 
             # We managed to get an image; continue and process the contours present in it
             if img is not None:
@@ -327,14 +354,18 @@ class Camera():
         self.capture_custom_shapes()
         self.load_custom_shapes()
 
+        shape = 'heart'
+
         # self.stream_from_camera()
 
-        for i in range(35):
-            x, _ = self.stream_and_detect(wantedShape='heart', showStream=True, continuousStream=True)
+        for i in range(1000):
+            x, _ = self.stream_and_detect(wantedShape=shape, showStream=True, continuousStream=False, multiThread=False)
+            
             if x:
-                print("Position of heart: {}px.".format(x))
+                print("Position of {}: {}px.".format(shape, x))
             else:
                 print(":-(")
+
         self.destroy_camera()
 
     def read_shapes_for_confmtrx(self, distance):
