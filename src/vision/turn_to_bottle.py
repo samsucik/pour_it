@@ -92,7 +92,7 @@ class turn_to_bottle:
     def adjust_angle(self, cam, shape):
         # change to finite loop
         while True:
-            x = cam.stream_and_detect(wantedShape=shape, showStream=True, continuousStream=False, timeToRun=1.0)
+            x,_ = cam.stream_and_detect(wantedShape=shape, showStream=True, continuousStream=False, timeToRun=1.0)
             if x is not None:
                 self.turn_once(x)
             print("X: " + str(x))

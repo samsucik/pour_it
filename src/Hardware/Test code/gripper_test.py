@@ -5,10 +5,11 @@ conn = rpyc.classic.connect('ev3dev') #host name or IP address of EV3
 ev3 = conn.modules['ev3dev.ev3'] #import ev3dev.ev3
 import time
 
-gripper = ev3.MediumMotor("outC")
+gripper = ev3.MediumMotor("outA")
 touchSensor = ev3.TouchSensor()
-rightM = ev3.LargeMotor('outA')
+rightM = ev3.LargeMotor('outC')
 leftM = ev3.LargeMotor('outB')
+pourer = ev3.LargeMotor('outD')
 
 def driveForward(speed):
     rightM.run_forever(speed_sp=speed)
@@ -45,6 +46,12 @@ def stopGripper():
         if btn.any():
             gripper.stop()
 
+def startPouring():
+    pourer.run_forever(speed_sp=-50)
+
+def returnPourer():
+    pourer.run_forever(speed_sp=50)
+
 
 # -------- Run section -------
 
@@ -69,8 +76,14 @@ while True:
         turnRight90()
     elif k == "\x1b[D":
         turnLeft90()
+    elif k == "p":
+        startPouring()
+    elif k == "l":
+        returnPourer()
+    elif k == "g":
+       gripper.stop()
     else:
-        gripper.stop()
+        pourer.stop()
         leftM.stop()
         rightM.stop()
 

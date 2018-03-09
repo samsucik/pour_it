@@ -32,7 +32,7 @@ def approach_bottle(shape):
     leftM.run_forever(speed_sp=100)
 
     while uhead.distance_centimeters > 10:
-        x = cam.stream_and_detect(wantedShape=shape, showStream=True, continuousStream=False, timeToRun=1)
+        x, _ = cam.stream_and_detect(wantedShape=shape, showStream=True, continuousStream=False, timeToRun=1)
         if x is not None:
             if x < 75 or x > 85:
                 rightM.stop()
@@ -83,10 +83,12 @@ pid = run.Popen(["python3", "forward.py"])
 x = None
 i = 0
 while x is None:
-    x = cam.stream_and_detect(wantedShape=shape, showStream=True)
+    x, height = cam.stream_and_detect(wantedShape=shape, showStream=True)
     print("shape detected: " + str(x))
-    if (x is not None) and i < 2:
+    if ((x is not None) and i < 2 ):
         i += 1
+        x = None
+    if (height is not None )and height < 13:
         x = None
 
 # kill PID process on brick when camera finds bottle stop motors all they will still run
