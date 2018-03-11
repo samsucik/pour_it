@@ -13,10 +13,12 @@ ev3 = conn.modules['ev3dev.ev3']
 cam = Camera()
 
 print("here")
-gripper = ev3.MediumMotor("outC")
-leftM = ev3.LargeMotor('outB')
-rightM = ev3.LargeMotor('outA')
+gripper = ev3.MediumMotor("outA")
+pourer = ev3.LargeMotor('outB')
+leftM = ev3.LargeMotor('outC')
+rightM = ev3.LargeMotor('outD')
 uhead = ev3.UltrasonicSensor('in1')
+
 
 def openGripper():
     gripper.run_forever(speed_sp=-100)
@@ -99,7 +101,6 @@ rightM.stop()
 #turns robot to bottle needs bottles
 print("WE ARE HERE")
 turn.adjust_angle(cam, shape)
-
 
 ev3.Sound.speak("aligned with bottle")
 time.sleep(4)

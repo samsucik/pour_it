@@ -8,8 +8,8 @@ import time
 gripper = ev3.MediumMotor("outA")
 touchSensor = ev3.TouchSensor()
 rightM = ev3.LargeMotor('outC')
-leftM = ev3.LargeMotor('outB')
-pourer = ev3.LargeMotor('outD')
+leftM = ev3.LargeMotor('outD')
+pourer = ev3.LargeMotor('outB')
 
 def driveForward(speed):
     rightM.run_forever(speed_sp=speed)

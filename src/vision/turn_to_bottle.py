@@ -10,9 +10,9 @@ import json
 class turn_to_bottle:
 
     def __init__(self):
-        self.leftM = ev3.LargeMotor('outB')
-        self.rightM = ev3.LargeMotor('outA')
-        self.cline = ev3.ColorSensor('in4')
+        self.leftM = ev3.LargeMotor('outC')
+        self.rightM = ev3.LargeMotor('outD')
+        self.cline = ev3.ColorSensor()
         self.cline.mode = 'COL-REFLECT'
         self.leftM.run_direct()
         self.rightM.run_direct()
