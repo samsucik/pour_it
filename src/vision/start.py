@@ -1,6 +1,7 @@
 import time
 import sys
 from camera import *
+
 from turn_to_bottle import turn_to_bottle
 # from ..Software import forward
 
@@ -19,14 +20,12 @@ leftM = ev3.LargeMotor('outC')
 rightM = ev3.LargeMotor('outD')
 uhead = ev3.UltrasonicSensor('in1')
 
-
 def openGripper():
     gripper.run_forever(speed_sp=-100)
 
 def closeGripper():
     # gripper.ramp_up_sp()
     gripper.run_forever(speed_sp=100)
-
 
 # move to turn_to_bottle class
 def approach_bottle(shape):
@@ -56,7 +55,6 @@ turn = turn_to_bottle()
 
 ########## code segment#########
 
-
 # receive shape from user
 ev3.Sound.speak("please present card").wait()
 shape = None
@@ -85,7 +83,7 @@ pid = run.Popen(["python3", "forward.py"])
 x = None
 i = 0
 while x is None:
-    x, height = cam.stream_and_detect(wantedShape=shape, showStream=True)
+    x, height = cam.stream_and_detect(wantedShape='heart', showStream=True)
     print("shape detected: " + str(x))
     if ((x is not None) and i < 2 ):
         i += 1
@@ -117,5 +115,5 @@ time.sleep(2)
 
 # run PID back to start around the loop
 
-# clean up cod
+# clean up code
 cam.destroy_camera()

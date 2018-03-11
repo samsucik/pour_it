@@ -11,11 +11,11 @@ import calibrate
 ############################# SETUP + VARIABLES ########################################################################
 # Motors setup.
 #armM = MedsiumMotor('outA')
-leftM = ev3.LargeMotor('outB')
-rightM = ev3.LargeMotor('outA')
+leftM = ev3.LargeMotor('outC')
+rightM = ev3.LargeMotor('outD')
 
 # Color sensor for following the line.
-cline = ev3.ColorSensor('in4')
+cline = ev3.ColorSensor('in2')
 cline.mode = 'COL-REFLECT'
 
 # Color sensor for detecting colored card + correct bottle.
@@ -23,7 +23,7 @@ cline.mode = 'COL-REFLECT'
 #carm.mode = 'COL-COLOR'
 
 # Ultrasonic sensor for detecting the beginning and end of the track.
-uhead = ev3.UltrasonicSensor('in1')
+uhead = ev3.UltrasonicSensor()
 
 # Time for the robot to make the turn at the end (ultrasonic sensor's detection is paused during this time).
 time_for_turn = 7
@@ -31,14 +31,14 @@ time_for_turn = 7
 colours = ['unknown', 'black', 'blue', 'green', 'yellow', 'red', 'white', 'brown']
 
 # Controls the base power to each one of the large motors.
-power = 30
+power = 40
 
 # Minimum and maximum reflected light intensity values.
 minRef = 4
 maxRef = 77
 
 # % of white we want as the target (for the PID controller's error calculation).
-target = 60
+target = 55
 
 # PID controller parameters (need to be re-tuned if the robot changes drastically in the future demos).
 #kd =1 , ki=0 kp=0,
@@ -46,9 +46,9 @@ target = 60
 # kd = 1
 # ki = float(0.5)
 
-kp = float(0.7)
+kp = float(1)
 ki = float(0.6)
-kd = float(4)
+kd = float(12)
 
 # kp = float(0.35)
 # ki = float(0.04)
@@ -320,11 +320,7 @@ def run(power, target, kp, kd, ki, direction, minRef, maxRef):
 (minRef,maxRef) = (10, 86)
 
 ###################################################TESTING REACHING BLACK LINE AGAIN + RETURNING########################
-val = generalPIDRun(mode,power,target,direction,kp,kd,ki,minRef,maxRef,waiting_time,stop_dist_cm,leftM,rightM)
-if(val == 1):
-    ev3.Sound.speak('Robot stopped due to obstacle')
-else:
-    ev3.Sound.speak('Robot stopped due to button press')
+generalPIDRun(mode,power,target,direction,kp,kd,ki,minRef,maxRef,waiting_time,stop_dist_cm,leftM,rightM)
 # run(power, target, kp, kd, ki, direction, minRef, maxRef)
 
 # from rwJSON import rwJSON

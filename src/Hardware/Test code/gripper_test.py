@@ -27,7 +27,6 @@ def turnLeft90():
     rightM.run_forever(speed_sp=200)
     leftM.run_forever(speed_sp=-200)
 
-
 # gripper.run_timed(speed_sp=400, time_sp=2000)
 def openGripper():
     gripper.run_forever(speed_sp=-100)
