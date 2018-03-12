@@ -335,10 +335,13 @@ class Camera():
 
 
     def read_shape_from_card(self):
-        img = self.get_fresh_image_from_camera(timeToRun=2.0)
+        img = self.get_fresh_image_from_camera(timeToRun=2.0, multiThread=False)
+        # print("image: {}found".format("not" if img is None else ""))
         if img is not None:
             contours, _ = self.get_contours(img)
-            _, label = self.find_most_salient_contour(contours)
+            # print("{} contours".format(len(contours)))
+            contour, label = self.find_most_salient_contour(contours)
+            # print(contour, label)
             return label
         else:
             return None
@@ -386,11 +389,28 @@ class Camera():
                             shapeCounter += 1
                     f.write(name + "," + shape + "\n")
 
+    def get_desired_shape(self, offset=6):
+        shape = None
+        i = 0
+        while shape is None:
+            print("waiting for shape")
+            # discard first 5 reads that are not none (e.g a shape)
+            shape = self.read_shape_from_card()
+            if (shape is not None) and i < offset:
+                print("found shape: " + shape)
+                shape = None
+                i += 1
+            print(shape)
+
+        return shape
+
 if __name__ == "__main__":
     cam = Camera()
     cam.load_custom_shapes()
 
-    cam.demo()
+    cam.get_desired_shape()
+
+    # cam.demo()
 
     # cam.stream_from_camera()
 

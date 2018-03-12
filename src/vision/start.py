@@ -13,12 +13,17 @@ ev3 = conn.modules['ev3dev.ev3']
 
 cam = Camera()
 
-print("here")
 gripper = ev3.MediumMotor("outA")
 pourer = ev3.LargeMotor('outB')
 leftM = ev3.LargeMotor('outC')
 rightM = ev3.LargeMotor('outD')
 uhead = ev3.UltrasonicSensor('in1')
+
+# set up camera, setup turning
+# cam.capture_custom_shapes()
+cam.load_custom_shapes()
+print("before turn bottle")
+turn = turn_to_bottle()
 
 def openGripper():
     gripper.run_forever(speed_sp=-100)
@@ -32,9 +37,11 @@ def approach_bottle(shape):
     rightM.run_forever(speed_sp=100)
     leftM.run_forever(speed_sp=100)
 
+    # If within 10 centimeters stop
     while uhead.distance_centimeters > 10:
         x, _ = cam.stream_and_detect(wantedShape=shape, showStream=True, continuousStream=False, timeToRun=1)
         if x is not None:
+            # re-adjust alignment if shape moves more than 5 centers either way
             if x < 75 or x > 85:
                 rightM.stop()
                 leftM.stop()
@@ -47,27 +54,12 @@ def approach_bottle(shape):
     rightM.stop()
     leftM.stop()
 
-# set up camera, setup turning
-# cam.capture_custom_shapes()
-cam.load_custom_shapes()
-print("before turn bottle")
-turn = turn_to_bottle()
-
-########## code segment#########
+########## code segment #########
 
 # receive shape from user
 ev3.Sound.speak("please present card").wait()
-shape = None
-i = 0
-while shape is None:
-    print("waiting on shape")
-    # discard first 5 reads that are not none (e.g a shape)
-    shape = cam.read_shape_from_card()
-    if (shape is not None) and i < 6:
-        print(shape)
-        shape = None
-        i += 1
-    print(shape)
+
+shape = cam.get_desired_shape()
 
 print(shape)
 ev3.Sound.speak("Your shape was " + shape)
@@ -79,11 +71,10 @@ time.sleep(2)
 pid = run.Popen(["python3", "forward.py"])
 
 # activate camera to detect shape user has presented
-
 x = None
 i = 0
 while x is None:
-    x, height = cam.stream_and_detect(wantedShape='heart', showStream=True)
+    x, height = cam.stream_and_detect(wantedShape=shape, showStream=True)
     print("shape detected: " + str(x))
     if ((x is not None) and i < 2 ):
         i += 1
@@ -96,7 +87,7 @@ pid.kill()
 leftM.stop()
 rightM.stop()
 
-#turns robot to bottle needs bottles
+# turns robot to bottle
 print("WE ARE HERE")
 turn.adjust_angle(cam, shape)
 
@@ -106,6 +97,23 @@ time.sleep(4)
 # move towards bottle
 approach_bottle(shape)
 ev3.Sound.speak("bottle approached")
+
+# initialise slow approach after alignment
+# turn.adjust_angle(cam, shape)
+# slow approach code
+
+# check for proximity within 1cm
+
+# grip bottle
+
+# lift bottle out of the way of ultra sonic sensor
+
+# go back to line
+# turn.goBackUntilLine(motors_power=80, break_value=60)
+
+# run pid to go around loop
+
+# when back at pouring area initialise pouring
 
 time.sleep(2)
 ev3.Sound.speak("opening gripper")
