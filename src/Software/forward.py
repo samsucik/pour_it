@@ -9,362 +9,173 @@ import calibrate
 # Steering2 and the original version of "run" have been taken from: https://github.com/Klabbedi/ev3/blob/master/README.md.
 
 ############################# SETUP + VARIABLES ########################################################################
-# Motors setup.
-#armM = MedsiumMotor('outA')
-leftM = ev3.LargeMotor('outC')
-rightM = ev3.LargeMotor('outD')
+class PID:
+    def __init__(self):
 
-# Color sensor for following the line.
-cline = ev3.ColorSensor('in2')
-cline.mode = 'COL-REFLECT'
+    # Motors setup.
+    self.leftM = ev3.LargeMotor('outC')
+    self.rightM = ev3.LargeMotor('outD')
 
-# Color sensor for detecting colored card + correct bottle.
-#carm = ColorSensor('in2')
-#carm.mode = 'COL-COLOR'
+    # Color sensor for following the line.
+    self.cline = ev3.ColorSensor('in2')
+    self.cline.mode = 'COL-REFLECT'
 
-# Ultrasonic sensor for detecting the beginning and end of the track.
-uhead = ev3.UltrasonicSensor()
+    # Ultrasonic sensor for detecting the beginning and end of the track.
+    self.uhead = ev3.UltrasonicSensor()
 
-# Time for the robot to make the turn at the end (ultrasonic sensor's detection is paused during this time).
-time_for_turn = 7
+    # Controls the base power to each one of the large motors.
+    self.power = 45
 
-colours = ['unknown', 'black', 'blue', 'green', 'yellow', 'red', 'white', 'brown']
+    # Minimum and maximum reflected light intensity values.
+    self.minRef = 10
+    self.maxRef = 86
 
-# Controls the base power to each one of the large motors.
-power = 40
+    # % of white we want as the target (for the PID controller's error calculation).
+    self.target = 55
 
-# Minimum and maximum reflected light intensity values.
-minRef = 4
-maxRef = 77
+    self.kp = float(0.9)
+    self.ki = float(0.7)
+    self.kd = float(10)
 
-# % of white we want as the target (for the PID controller's error calculation).
-target = 55
+    # -1 if the robot will follow the left side of the black line, 1 otherwise (part of the PID controller).
+    self.direction = -1
 
-# PID controller parameters (need to be re-tuned if the robot changes drastically in the future demos).
-#kd =1 , ki=0 kp=0,
-# kp = float(2)
-# kd = 1
-# ki = float(0.5)
+    self.waiting_time = 3
+    self.stop_dist_cm = 13
+    self.mode = 'runUntilStart'
 
-kp = float(1)
-ki = float(0.6)
-kd = float(12)
+    # Dictionary for PID modes:
+    self.mode_PID = {}
 
-# kp = float(0.35)
-# ki = float(0.04)
-# kd = 2
+    # Variable used for detecting a button press ()
+    self.btn = ev3.Button()
 
 
-# -1 if the robot will follow the left side of the black line, 1 otherwise (part of the PID controller).
-direction = -1
-
-# Colored bottle the robot needs to find.
-bottle_col = 0
-
-# End of the line minimum distance (cm) between ultrasonic sensor and margin of our workspace.
-stop_dist_first = 32
-stop_dist_second = 5
-
-waiting_time = 3
-stop_dist_cm = 13
-mode = 'runUntilStart'
-
-# Dictionary for PID modes:
-mode_PID = {}
-
-# Variable used for detecting a button press ()
-btn = ev3.Button()
-
-# Makes the robot drive forward for time_, with speed.
-def driveForward(time_, speed):
-    rightM.run_timed(time_sp=time_, speed_sp=speed)
-    leftM.run_timed(time_sp=time_, speed_sp=speed)
-
-# Hard-coded right turn (mainly for testing).
-def turnRight90():
-    rightM.run_timed(time_sp=1500, speed_sp=-400)
-    leftM.run_timed(time_sp=1500, speed_sp=400)
-
-# Hard-coded left turn (mainly for testing).
-def turnLeft90():
-    rightM.run_timed(time_sp=1500, speed_sp=400)
-    leftM.run_timed(time_sp=1500, speed_sp=-400)
-
-def getMaxReflVal():
-    while True:
-        sleep(4)
-        ev3.Sound.speak("Present white card.")
-        sleep(4)
-        max_ref = 0
-
-        end_time = time() + 1.5
-        while time() < end_time:
-            read = cline.value()
-            if read > max_ref:
-                max_ref = read
-
-        if max_ref < 70:
-            ev3.Sound.speak("Reading failed. Trying again.")
-            sleep(3)
+    # course = determines how hard and in which direction the robot should turn in order to keep following the line.
+    # course = calculated using kp,ki,kd
+    # power = reference power we give to the wheels
+    def steering2(course, power):
+        if course >= 0:
+            if course > 100:
+                power_right = 0
+                power_left = power
+            else:
+                power_left = power
+                power_right = power - ((power * course) / 100)
         else:
-            break
+            if course < -100:
+                power_left = 0
+                power_right = power
+            else:
+                power_right = power
+                power_left = power + ((power * course) / 100)
+        return (int(power_left), int(power_right))
 
-    ev3.Sound.speak("Max reflective value read.")
-    sleep(4)
-    return max_ref
-
-def getMinReflVal():
-    while True:
-        ev3.Sound.speak("Present black card.")
-        sleep(4)
-        min_ref = 100
-
-        end_time = time() + 1.5
-        while time() < end_time:
-            read = cline.value()
-            if read < min_ref:
-                min_ref = read
-        if min_ref > 10:
-            ev3.Sound.speak("Reading failed. Trying again.")
-            sleep(3)
+    # args[0] = end_time
+    # args[1] = start_time
+    # returns 1 if a button was pressed.
+    # returns 2 if execution time was exceeded.
+    def timedCondition(self,args):
+        if(not self.btn.any() and time() - args[1] < args[0]):
+            return 0
+        elif(time() - args[1] >= args[0]):
+            return 2
         else:
-            break
+            return 1
 
-    ev3.Sound.speak("Min reflective value read.")
-    sleep(2)
-    return min_ref
-
-# course = determines how hard and in which direction the robot should turn in order to keep following the line.
-# course = calculated using kp,ki,kd
-# power = reference power we give to the wheels
-def steering2(course, power):
-    if course >= 0:
-        if course > 100:
-            power_right = 0
-            power_left = power
+    # args[0] = waiting_time, args[1] = min_dist, args[2] = leftM, args[3] = rightM
+    def runUntilStartCondition(self,args):
+        if(self.uhead.distance_centimeters <= args[1]):
+            args[2].stop()
+            args[3].stop()
+            start_time = time()
+            while(time() < start_time + args[0]):
+                if(self.uhead.distance_centimeters > args[1]):
+                    args[2].run_direct()
+                    args[3].run_direct()
+                    return 0
+            return 1
+        elif(self.btn.any()):
+            return 2
         else:
-            power_left = power
-            power_right = power - ((power * course) / 100)
-    else:
-        if course < -100:
-            power_left = 0
-            power_right = power
-        else:
-            power_right = power
-            power_left = power + ((power * course) / 100)
-    return (int(power_left), int(power_right))
+            return 0
 
+    def createPIDmodes(self):
+        self.mode_PID['runUntilStart'] = self.runUntilStartCondition
 
-# Hardcoded turn: called when robot finds the correct bottle and needs to turn.
-def goBackAndTurn():
-    print("goBackAndTurn: reached")
-    rightM.run_timed(time_sp=1150, speed_sp=-200)
-    leftM.run_timed(time_sp=1150, speed_sp=-200)
-    sleep(2)
-    leftM.run_timed(time_sp=1750,speed_sp=200)
-    sleep(2)
-    rightM.run_forever(speed_sp=200)
-    leftM.run_forever(speed_sp=200)
-    while(not(btn.any())):
-        if(uhead.distance_centimeters <= 5):
-            leftM.stop()
-            rightM.stop()
-            break
+    # mode and params:
+    # 'timed' -> args[0] = time() + amount of time you want it to run for.
 
-# args[0] = end_time
-# args[1] = start_time
-# returns 1 if a button was pressed.
-# returns 2 if execution time was exceeded.
-def timedCondition(args):
-    if(not btn.any() and time() - args[1] < args[0]):
-        return 0
-    elif(time() - args[1] >= args[0]):
-        return 2
-    else:
-        return 1
+    def generalPIDRun(self, *args, **kwargs):
 
-##################NEXT 2 CONDITIONS SHOULD BE REWRITTEN IF NEEDED##################################################
+        self.createPIDmodes()
 
-# args[0] = waiting_time, args[1] = min_dist, args[2] = leftM, args[3] = rightM
-def runUntilStartCondition(args):
-    if(uhead.distance_centimeters <= args[1]):
-        args[2].stop()
-        args[3].stop()
+        lastError = error = integral = 0
+
+        # This mode will allow us to change the speed of the motors immediately.
+        self.leftM.run_direct()
+        self.rightM.run_direct()
+        returnVal = 0
+        while(not returnVal):
+            refRead = self.cline.value()
+
+            # Calculate the current error and its derivative.
+            error = self.target - (100 * (refRead - self.minRef) / (self.maxRef - self.minRef))
+            derivative = error - lastError
+            lastError = error
+
+            # If the error changes sign, reset the accumulated error.
+            if(error * lastError < 0):
+                integral = 0
+            else:
+                integral = float(0.5) * integral + error
+
+            # PID controller.
+            course = (self.kp * error + self.kd * derivative + self.ki * integral) * self.direction
+
+            # Calculate the power each motor should be given and pass it to them.
+            for (motor, pow) in zip((self.leftM, self.rightM), steering2(course, self.power)):
+                motor.duty_cycle_sp = pow
+            sleep(0.01)  # Approx 100Hz
+            returnVal = mode_PID[self.mode](args)
+
+        self.leftM.stop()
+        self.rightM.stop()
+
+        return returnVal
+
+    def run(self):
+        lastError = error = integral = 0
+        self.leftM.run_direct()
+        self.rightM.run_direct()
         start_time = time()
-        while(time() < start_time + args[0]):
-            if(uhead.distance_centimeters > args[1]):
-                args[2].run_direct()
-                args[3].run_direct()
-                return 0
-        return 1
-    elif(btn.any()):
-        return 2
-    else:
-        return 0
+        while (not self.btn.any()):
+            checkpoint_time = time()
 
-def createPIDmodes():
-    mode_PID['runUntilStart'] = runUntilStartCondition
+            refRead = self.cline.value()
 
-# mode and params:
-# 'timed' -> args[0] = time() + amount of time you want it to run for.
+            # Is it ok if refRead-minRef will be negative?
+            error = self.target - (100 * (refRead - self.minRef) / (self.maxRef - self.minRef))
+            derivative = error - lastError
+            lastError = error
 
-def generalPIDRun(mode, power, target, direction, kp, kd, ki, minRef, maxRef, *args, **kwargs):
+            # If the error changes sign, reset the accumulated error.
+            if(error * lastError < 0):
+                integral = 0
+            else:
+                integral = float(0.5) * integral + error
 
-    createPIDmodes()
-
-    lastError = error = integral = 0
-
-    # This mode will allow us to change the speed of the motors immediately.
-    leftM.run_direct()
-    rightM.run_direct()
-    returnVal = 0
-    while(not returnVal):
-        refRead = cline.value()
-
-        # Calculate the current error and its derivative.
-        error = target - (100 * (refRead - minRef) / (maxRef - minRef))
-        derivative = error - lastError
-        lastError = error
-
-        # If the error changes sign, reset the accumulated error.
-        if(error * lastError < 0):
-            integral = 0
-        else:
-            integral = float(0.5) * integral + error
-
-        # PID controller.
-        course = (kp * error + kd * derivative + ki * integral) * direction
-
-        # Calculate the power each motor should be given and pass it to them.
-        for (motor, pow) in zip((leftM, rightM), steering2(course, power)):
-            motor.duty_cycle_sp = pow
-        sleep(0.01)  # Approx 100Hz
-        returnVal = mode_PID[mode](args)
-
-    leftM.stop()
-    rightM.stop()
-
-    return returnVal
-
-def run(power, target, kp, kd, ki, direction, minRef, maxRef):
-    lastError = error = integral = 0
-    leftM.run_direct()
-    rightM.run_direct()
-    start_time = time()
-    while (not btn.any()):
-        checkpoint_time = time()
-
-        refRead = cline.value()
-
-        # Is it ok if refRead-minRef will be negative?
-        error = target - (100 * (refRead - minRef) / (maxRef - minRef))
-        derivative = error - lastError
-        lastError = error
-
-        # If the error changes sign, reset the accumulated error.
-        if(error * lastError < 0):
-            integral = 0
-        else:
-            integral = float(0.5) * integral + error
-
-        course = (kp * error + kd * derivative + ki * integral) * direction
-        for (motor, pow) in zip((leftM, rightM), steering2(course, power)):
-            motor.duty_cycle_sp = pow
-        sleep(0.05)
-        print(time() - checkpoint_time)
+            course = (self.kp * error + self.kd * derivative + self.ki * integral) * self.direction
+            for (motor, pow) in zip((self.leftM, self.rightM), steering2(course, self.power)):
+                motor.duty_cycle_sp = pow
+            sleep(0.05)
+            print(time() - checkpoint_time)
 
 
-    leftM.stop()
-    rightM.stop()
+        self.leftM.stop()
+        self.rightM.stop()
 
-# Method for setting bottle_col.
-# def presentColoredCard():
-#     sleep(2)
-#
-#     # Wait for input on control sensor.
-#     while True:
-#
-#         ev3.Sound.speak("Provide colored card.")
-#         sleep(3)
-#
-#         while carm.value() == 0 or carm.value() == 1:
-#             print("No color inputted")
-#             sleep(1)
-#
-#         usr_col = carm.value()
-#
-#         ev3.Sound.speak("Your color was " + colours[usr_col])
-#         sleep(3)
-#         ev3.Sound.speak("Confirm color")
-#         sleep(3)
-#
-#         while carm.value() == 0 or carm.value()==1:
-#             print("No color inputted")
-#             sleep(1)
-#
-#         confirm_val = carm.value()
-#
-#         if confirm_val == usr_col:
-#             ev3.Sound.speak("Colours match")
-#             global bottle_col
-#             bottle_colgeneralPIDRun(mode,power,target,kp,kd,ki,minRef,maxRef,waiting_time,stop_dist_cm,leftM,rightM) = confirm_val # set color of bottle that needs to be found
-#             sleep(2.5)
-#             break
-#         else:
-#             ev3.Sound.speak("Colours do not match").wait()
-#             sleep(2)
-
-#################### Start of script ################
-
-# (minRef,maxRef) = calibrate.calibrate(cline)
-(minRef,maxRef) = (10, 86)
-
-###################################################TESTING REACHING BLACK LINE AGAIN + RETURNING########################
-generalPIDRun(mode,power,target,direction,kp,kd,ki,minRef,maxRef,waiting_time,stop_dist_cm,leftM,rightM)
-# run(power, target, kp, kd, ki, direction, minRef, maxRef)
-
-# from rwJSON import rwJSON
-#
-# writejson = rwJSON()
-#
-# motorSpeeds = [(30,0),(30,30),(30,0),(30,30)]
-#
-# for (left_sp,right_sp) in motorSpeeds:
-#
-#     leftM.run_timed(time_sp = 1500,duty_cycle_sp = left_sp)
-#     rightM.run_timed(time_sp = 1500, duty_cycle_sp = right_sp)
-#     writejson.addCommand(left_sp,right_sp,1500)
-#     sleep(1.6)
-#
-# writejson.saveCommands('commands')
-#
-# def goBackUntilLine():
-#     commandList = rwJSON.readCommands('commands')
-#     index = 0
-#     while(cline.value() > 20 and index < len(commandList)):
-#         leftM.run_timed(time_sp = commandList[index]['time'], duty_cycle_sp = -commandList[index]['left_sp'])
-#         rightM.run_timed(time_sp = commandList[index]['time'], duty_cycle_sp = -commandList[index]['right_sp'])
-#         startTime = time()
-#         while(time() < startTime + commandList[index]['time']):
-#             if(cline.value() < 20):
-#                 leftM.stop()
-#                 rightM.stop()
-#                 break
-#         if(cline.value() < 20):
-#             leftM.stop()
-#             rightM.stop()
-#             break
-#         else:
-#             index += 1
-#     if(cline.value() > 20):
-#         leftM.stop()
-#         rightM.stop()
-#         print('goBackUntilLine FAILED')
-#     else:
-#         generalPIDRun('runUntilStart', power, target, direction, kp, kd, ki, minRef, maxRef, 3, 10, leftM, rightM)
-#
-# goBackUntilLine()
-
-
-
-
+if __name__ == "__main__":
+    PID_obj = PID()
+     # args[0] = waiting_time, args[1] = min_dist, args[2] = leftM, args[3] = rightM
+    PID_obj.generalPIDRun([PID_obj.waiting_time,PID_obj.stop_dist_cm,PID_obj.leftM,PID_obj.rightM])
