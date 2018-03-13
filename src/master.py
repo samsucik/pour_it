@@ -1,9 +1,8 @@
-import time
+from time import sleep
 import sys
-from camera import *
-
-from turn_to_bottle import turn_to_bottle
-# from ..Software import forward
+from vision.camera import *
+from Software.pouring import *
+from Software.turn_to_bottle import *
 
 # remote python setup
 import rpyc
@@ -15,7 +14,6 @@ ev3proxy = conn.modules['ev3_proxy']
 cam = Camera()
 
 gripper = ev3.MediumMotor("outA")
-pourer = ev3.LargeMotor('outB')
 leftM = ev3.LargeMotor('outC')
 rightM = ev3.LargeMotor('outD')
 uhead = ev3.UltrasonicSensor()
@@ -26,6 +24,7 @@ uhead = ev3.UltrasonicSensor()
 cam.load_custom_shapes()
 print("before turn bottle")
 turn = turn_to_bottle()
+pourer = Pouring()
 
 def openGripper():
     gripper.run_forever(speed_sp=-100)
@@ -47,7 +46,7 @@ def approach_bottle(shape):
                 ev3proxy.motors_stop()
                 turn.adjust_angle(cam, shape)
                 # leftM.run_timed(speed_sp=100, time_sp=200)
-                time.sleep(1)
+                sleep(1)
                 ev3proxy.motors_run(speed=100)
     ev3proxy.motors_stop()
 
@@ -55,7 +54,7 @@ def slow_approach():
     ev3proxy.motors_run(speed=25)
 
     while not uhead.distance_centimeters == 255:
-        True
+        pass
 
     ev3proxy.motors_stop()
 
@@ -66,7 +65,7 @@ ev3.Sound.speak("please present card").wait()
 
 # make sure gripper is open before searching for a bottle
 openGripper()
-time.sleep(2)
+sleep(2)
 gripper.stop()
 
 leftM.stop()
@@ -76,9 +75,9 @@ shape = cam.get_desired_shape()
 
 print(shape)
 ev3.Sound.speak("Your shape was " + shape)
-time.sleep(4)
+sleep(4)
 ev3.Sound.speak("please remove card")
-time.sleep(2)
+sleep(2)
 
 # start pid to move robot pass camera so pid can check for shape as it travels
 pid = run.Popen(["python3", "forward.py"])
@@ -105,7 +104,7 @@ print("adjusting angle of robot to face bottle")
 turn.adjust_angle(cam, shape)
 
 ev3.Sound.speak("aligned with bottle")
-time.sleep(4)
+sleep(4)
 
 # move towards bottle
 approach_bottle(shape)
@@ -123,22 +122,36 @@ slow_approach()
 # grip bottle
 closeGripper()
 
-time.sleep(1)
+sleep(1)
 
 # lift bottle out of the way of ultra sonic sensor
-pourer.run_forever(speed_sp=-50)
-time.sleep(10)
-pourer.stop(stop_action="brake")
+pourer.liftPourer()
+
+sleep(7)
 
 # go back to line
 turn.goBack2Phase(motors_power=80)
 ev3proxy.motors_stop()
 
-
 # run pid to go around loop
 pid = run.Popen(["python3", "forward.py"])
 
+# wait until pid returns us to the start
+while not uhead.distance_centimeters < 10:
+    pass
+
 # when back at pouring area initialise pouring
+pourer.pour_it()
+
+sleep(4)
+
+# return pouring platform
+pourer.stopPourer()
+
+sleep(4)
+
+openGripper()
+gripper.stop()
 
 # clean up code
 cam.destroy_camera()

@@ -70,7 +70,8 @@ class Camera():
     # from the camera
     def load_custom_shapes(self):
         for n in self.custom_shapes_names:
-            img = cv2.imread(n + '.png')
+            # path = os.getcwd() + '/vision'
+            img = cv2.imread('vision/' + n + '.png')
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             _, contours, _ = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             self.custom_shapes_contours[n] = contours[0]
