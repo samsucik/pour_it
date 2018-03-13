@@ -78,13 +78,13 @@ class turn_to_bottle:
         speed_leftM = 0
         if x_coord <= self.camera_aspect_width/2:
             speed_rightM = self.base_speed + ( (diff**(0.30))*self.turn_speed_boost)
-            if speed_rightM < 80:
-                speed_rightM = 80
+            if speed_rightM < 90:
+                speed_rightM = 90
             print("speed Left: " + str(speed_rightM))
         else:
             speed_leftM = self.base_speed + ( (diff**(0.30))*self.turn_speed_boost)
-            if speed_leftM < 80:
-                speed_leftM = 80
+            if speed_leftM < 90:
+                speed_leftM = 90
             print("speed right: " + str(speed_leftM))
 
         self.rightM.run_timed(time_sp=time_to_run, speed_sp=int(speed_rightM ))

@@ -22,11 +22,13 @@ class Pouring:
         self.pourer.run_forever(speed_sp=-50)
 
     def stopPourer(self):
-        k = True
-        while k == True:
-            while self.touchSensor.value(0) and (k == True):
+        print("STOP Pourer")
+        self.pourer.run_forever(speed_sp=50)
+        while True:
+            if self.touchSensor.value() == 1:
                 self.pourer.stop()
-                k = False
+                print("pourer stopped")
+                break
 
     def liftPourer(self):
         self.pourer.run_timed(time_sp=14000, speed_sp=-50)
@@ -45,4 +47,11 @@ class Pouring:
 
 if __name__ == '__main__':
     p = Pouring()
+    print("lift pourer")
     p.liftPourer()
+    sleep(13)
+    print("pouring")
+    p.pour_it()
+    sleep(14)
+    print("return to initial position")
+    p.stopPourer()

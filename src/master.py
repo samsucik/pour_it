@@ -122,12 +122,13 @@ slow_approach()
 # grip bottle
 closeGripper()
 
+# wait until bottle is gripped before lifting
 sleep(1)
 
 # lift bottle out of the way of ultra sonic sensor
 pourer.liftPourer()
 
-sleep(7)
+sleep(13)
 
 # go back to line
 turn.goBack2Phase(motors_power=80)
@@ -137,19 +138,26 @@ ev3proxy.motors_stop()
 pid = run.Popen(["python3", "forward.py"])
 
 # wait until pid returns us to the start
-while not uhead.distance_centimeters < 10:
+while not uhead.distance_centimeters < 12:
     pass
+
+# stop pid that is running arround the loop
+ev3proxy.motors_stop()
+pid.kill()
+ev3proxy.motors_stop()
 
 # when back at pouring area initialise pouring
 pourer.pour_it()
 
-sleep(4)
+# wait for pouring to complete
+sleep(12)
 
 # return pouring platform
 pourer.stopPourer()
 
-sleep(4)
+sleep(2)
 
+# open gripper
 openGripper()
 gripper.stop()
 
