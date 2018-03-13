@@ -2,6 +2,7 @@
 import rpyc
 conn = rpyc.classic.connect('ev3dev') #host name or IP address of EV3
 ev3 = conn.modules['ev3dev.ev3'] #import ev3dev.ev3
+ev3proxy = conn.modules['ev3_proxy']
 from time import time, sleep
 import math
 import sys
@@ -102,16 +103,23 @@ class turn_to_bottle:
                 print("broke")
                 break
 
-    def goBackUntilLine(self, motors_power, break_value):
+    def goBack2Phase(self, motors_power):
+        self.goBackUntilLine(motors_power, 40, stopOn="black")
+        self.goBackUntilLine(motors_power, 70, stopOn="white")
+
+    def goBackUntilLine(self, motors_power, break_value, stopOn="black"):
+        stopOnOperator = 1 if stopOn == "black" else -1
         # self.leftM.run_direct()
         # self.rightM.run_direct()
         # self.leftM.duty_cycle_sp = -motors_power
         # self.rightM.duty_cycle_sp = -motors_power]
-        self.leftM.run_forever(speed_sp=-motors_power)
-        self.rightM.run_forever(speed_sp=-motors_power)
+        # self.leftM.run_forever(speed_sp=-motors_power)
+        # self.rightM.run_forever(speed_sp=-motors_power)
+        ev3proxy.motors_run(speed=-motors_power)
         while True:
             start_time = time()
-            if self.cline.value() <= break_value:
+            if (self.cline.value() - break_value)*stopOnOperator < 0:
                 break
             print('goBackUntilLine loop: ' + str(time() - start_time))
             print(self.cline.value())
+        print("seen val: " + str(break_value))

@@ -52,14 +52,12 @@ def approach_bottle(shape):
     ev3proxy.motors_stop()
 
 def slow_approach():
-    leftM.run_forever(speed_sp=25)
-    rightM.run_forever(speed_sp=25)
+    ev3proxy.motors_run(speed=25)
 
     while not uhead.distance_centimeters == 255:
         True
 
-    leftM.stop(stop_action="brake")
-    rightM.stop(stop_action="brake")
+    ev3proxy.motors_stop()
 
 ########## code segment #########
 
@@ -125,17 +123,22 @@ slow_approach()
 # grip bottle
 closeGripper()
 
+time.sleep(1)
+
 # lift bottle out of the way of ultra sonic sensor
+pourer.run_forever(speed_sp=-50)
+time.sleep(10)
+pourer.stop(stop_action="brake")
 
 # go back to line
-# turn.goBackUntilLine(motors_power=80, break_value=60)
+turn.goBack2Phase(motors_power=80)
+ev3proxy.motors_stop()
+
 
 # run pid to go around loop
-# pid = run.Popen(["python3", "forward.py"])
+pid = run.Popen(["python3", "forward.py"])
 
 # when back at pouring area initialise pouring
-
-# run PID back to start around the loop
 
 # clean up code
 cam.destroy_camera()
