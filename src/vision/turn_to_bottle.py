@@ -19,7 +19,7 @@ class turn_to_bottle:
         self.ultrasonic = ev3.UltrasonicSensor()
         self.camera_aspect_width = 160
         self.base_speed = 0
-        self.turn_speed_boost = 50
+        self.turn_speed_boost = 55
         self.leftm = []
         self.rightm = []
 
@@ -70,7 +70,7 @@ class turn_to_bottle:
     def turn_to_bottle(self, pattern_x_coord):
         self.drive(self.step_turn(pattern_x_coord))
 
-    def turn_once(self, x_coord):
+    def turn_once(self, x_coord, time_to_run=200):
         diff = math.fabs(x_coord-(self.camera_aspect_width/2))
         print("Diff: " + str(diff))
         speed_rightM = 0
@@ -78,7 +78,7 @@ class turn_to_bottle:
         if x_coord <= self.camera_aspect_width/2:
             speed_rightM = self.base_speed + ( (diff**(0.30))*self.turn_speed_boost)
             if speed_rightM < 80:
-                speed_rightM =80
+                speed_rightM = 80
             print("speed Left: " + str(speed_rightM))
         else:
             speed_leftM = self.base_speed + ( (diff**(0.30))*self.turn_speed_boost)
@@ -86,19 +86,19 @@ class turn_to_bottle:
                 speed_leftM = 80
             print("speed right: " + str(speed_leftM))
 
-        self.rightM.run_timed(time_sp=100, speed_sp=int(speed_rightM ))
-        self.leftM.run_timed(time_sp=100, speed_sp=int(speed_leftM ))
+        self.rightM.run_timed(time_sp=time_to_run, speed_sp=int(speed_rightM ))
+        self.leftM.run_timed(time_sp=time_to_run, speed_sp=int(speed_leftM ))
 
-    def adjust_angle(self, cam, shape):
+    def adjust_angle(self, cam, shape, tol=[80], time_to_run=200):
         # change to finite loop
         while True:
-            x,_ = cam.stream_and_detect(wantedShape=shape, showStream=True, continuousStream=False, timeToRun=1.0)
-            if x is not None:
-                self.turn_once(x)
+            x, height = cam.stream_and_detect(wantedShape=shape, showStream=True, continuousStream=False, timeToRun=1.0, multiThread=False)
+            if x is not None and height > 10:
+                self.turn_once(x, time_to_run)
             print("X: " + str(x))
 
             # values at which the robot will think its facing bottle directly, 80 is centre
-            if x in [80]:
+            if x in tol:
                 print("broke")
                 break
 

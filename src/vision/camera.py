@@ -342,9 +342,10 @@ class Camera():
             # print("{} contours".format(len(contours)))
             contour, label = self.find_most_salient_contour(contours)
             # print(contour, label)
-            return label
+            height = self.get_contour_height(contour)
+            return label, height
         else:
-            return None
+            return None, None
 
 
     def get_contour_height(self, contour):
@@ -395,7 +396,11 @@ class Camera():
         while shape is None:
             print("waiting for shape")
             # discard first 5 reads that are not none (e.g a shape)
-            shape = self.read_shape_from_card()
+            shape, height = self.read_shape_from_card()
+            if height < 10:
+                shape = None
+                continue
+
             if (shape is not None) and i < offset:
                 print("found shape: " + shape)
                 shape = None
@@ -408,9 +413,9 @@ if __name__ == "__main__":
     cam = Camera()
     cam.load_custom_shapes()
 
-    cam.get_desired_shape()
+    # cam.get_desired_shape()
 
-    # cam.demo()
+    cam.demo()
 
     # cam.stream_from_camera()
 
