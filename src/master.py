@@ -9,6 +9,7 @@ import rpyc
 conn = rpyc.classic.connect('ev3dev')
 run = conn.modules['subprocess']
 ev3 = conn.modules['ev3dev.ev3']
+
 ev3proxy = conn.modules['ev3_proxy']
 
 cam = Camera()
@@ -58,7 +59,11 @@ def slow_approach():
 
     ev3proxy.motors_stop()
 
+
 ########## code segment #########
+ev3.Sound.speak("Hello and welcome to the demo")
+
+sleep(3)
 
 # receive shape from user
 ev3.Sound.speak("please present card").wait()
@@ -124,12 +129,13 @@ closeGripper()
 
 # wait until bottle is gripped before lifting
 sleep(1)
-
+ev3.Sound.speak("lifting bottle")
 # lift bottle out of the way of ultra sonic sensor
 pourer.liftPourer()
 
 sleep(13)
 
+ev3.Sound.speak("moving back to line")
 # go back to line
 turn.goBack2Phase(motors_power=80)
 ev3proxy.motors_stop()
@@ -138,7 +144,7 @@ ev3proxy.motors_stop()
 pid = run.Popen(["python3", "forward.py"])
 
 # wait until pid returns us to the start
-while not uhead.distance_centimeters < 12:
+while not uhead.distance_centimeters < 14:
     pass
 
 # stop pid that is running arround the loop
@@ -146,12 +152,14 @@ ev3proxy.motors_stop()
 pid.kill()
 ev3proxy.motors_stop()
 
+ev3.Sound.speak("pouring")
 # when back at pouring area initialise pouring
 pourer.pour_it()
 
 # wait for pouring to complete
-sleep(12)
+sleep(11)
 
+ev3.Sound.speak("lowering bottle")
 # return pouring platform
 pourer.stopPourer()
 
@@ -160,6 +168,12 @@ sleep(2)
 # open gripper
 openGripper()
 gripper.stop()
+
+ev3.Sound.speak("bottle returned")
+sleep(2)
+
+ev3.Sound.speak("I'm finished. UGHHHHHHH").wait()
+
 
 # clean up code
 cam.destroy_camera()
