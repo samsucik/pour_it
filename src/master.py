@@ -169,10 +169,10 @@ pid = run.Popen(["python3", "XNO_pid.py"])
 
 # value of 5 equals red
 # wait until red marker is seen 
-while !(atStartSensor.value() == 5):
+while not(atStartSensor.value() == 5):
     True
 
-# stop motors and kill pid
+# stop motors and stop pid
 ev3proxy.motors_stop()
 pid.kill()
 ev3proxy.motors_stop()
