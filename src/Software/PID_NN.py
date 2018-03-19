@@ -53,6 +53,7 @@ class PID_NN:
             self.weights[1], self.weights[2], self.weights[3] = map(
                 float, lines[2].split(" "))
             f.close()
+            return self.weights
 
     def save_and_backup_weights(self):
         f1 = open(self.weights_path, 'w+')
@@ -152,7 +153,6 @@ class PID_NN:
 
     def train_model(self):
         self.read_training_values()
-
         try:
 
             if(len(self.ys) == 0):
