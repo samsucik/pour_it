@@ -85,7 +85,7 @@ ev3.Sound.speak("please remove card")
 sleep(2)
 
 # start pid to move robot pass camera so pid can check for shape as it travels
-pid = run.Popen(["python3", "forward.py"])
+pid = run.Popen(["python3", "XNO_pid_slow.py"])
 
 # activate camera to detect shape user has presented
 x = None
@@ -140,8 +140,8 @@ ev3.Sound.speak("moving back to line")
 turn.goBack2Phase(motors_power=80)
 ev3proxy.motors_stop()
 
-# run pid to go around loop
-pid = run.Popen(["python3", "forward.py"])
+# run pid to go around loop, using fast pid
+pid = run.Popen(["python3", "XNO_pid.py"])
 
 # wait until pid returns us to the start
 while not uhead.distance_centimeters < 14:
