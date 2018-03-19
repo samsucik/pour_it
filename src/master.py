@@ -18,7 +18,10 @@ gripper = ev3.MediumMotor("outA")
 leftM = ev3.LargeMotor('outC')
 rightM = ev3.LargeMotor('outD')
 uhead = ev3.UltrasonicSensor()
-
+atStartSensor = ev3.ColorSensor('in4')
+atStartSensor.mode = 'COL-COLOR'
+# for color sensor in mode 'COL_COLOR' the following values are true for its output
+# 0=unknown, 1=black, 2=blue, 3=green, 4=yellow, 5=red, 6=white, 7=brown
 
 # set up camera, setup turning
 # cam.capture_custom_shapes()
@@ -159,7 +162,23 @@ pourer.pour_it()
 # wait for pouring to complete
 sleep(11)
 
-ev3.Sound.speak("lowering bottle")
+ev3.Sound.speak("returning to start")
+
+# restart fast pid to return to starting position
+pid = run.Popen(["python3", "XNO_pid.py"])
+
+# value of 5 equals red
+# wait until red marker is seen 
+while !(atStartSensor.value() == 5):
+    True
+
+# stop motors and kill pid
+ev3proxy.motors_stop()
+pid.kill()
+ev3proxy.motors_stop()
+
+ev3.Sound.speak("returned to start and lowering bottle")
+
 # return pouring platform
 pourer.stopPourer()
 
