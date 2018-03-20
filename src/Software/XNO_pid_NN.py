@@ -54,25 +54,94 @@ class PID:
         self.weights_path = 'weights.txt'
         self.sensor_reads_path = 'sensor_inputs.txt'
         self.backup_path = 'backup.txt'
-        self.pid_nn = PID_NN(0.01,self.target,self.weights_path,self.sensor_reads_path,self.backup_path)
+        self.pid_nn = PID_NN(0.01,self.target/float(100),self.weights_path,self.sensor_reads_path,self.backup_path)
 
         self.weights = self.pid_nn.read_weights()
 
-    def PID_epoch(self):
-        self.pid_nn = PID_NN(0.01,self.target,self.weights_path,self.sensor_reads_path,self.backup_path)
-        self.weights = self.pid_nn.weights
-        self.train_NN_PID()
-        self.pid_nn.train_model()
+    def train_NN(self,epochs=20):
+        for i in range(1,epochs+1):
+            self.pid_nn = PID_NN(0.05,self.target/float(100),self.weights_path,self.sensor_reads_path,self.backup_path)
+            self.weights = self.pid_nn.weights
+            if(self.run_NN_PID_train()):
+                ev3.Sound.speak('Training model; epoch ' + str(i))
+                self.pid_nn.train_model()
+                sleep(2)
+            if(i < epochs):
+                ev3.Sound.speak("Press any button to continue training.")
+                while(not btn.any()):
+                    pass
+            else:
+                ev3.Sound.speak("Training complete")
+    
+    def squash_output(self,value):
+        if(value < -1):
+            return -1
+        elif(value > 1):
+            return 1
+        else:
+            return value
 
-    def initialize_prev_row(self,val):
-        self.prev_row = []
-        if()
+    # The robot runs until a button is pressed. 
+    # Then, the reads are saved in "sensor_inputs.txt".
+    def run_NN_PID_train(self):
+        # self.prev_row[0] = previous I neuron input;
+        # self.prev_row[1] = previous D neuron input;
+        self.prev_row = [0,0]
+        reads = []
+
+        self.rightM.run_direct()
+        self.leftM.run_direct()
+
+        target = self.target/float(100)
+
+        while(not self.btn.any()):
+            refRead = self.cline.value()
+
+            # Normalized read.
+            normRead = (refRead - self.minRef) / (self.maxRef - self.minRef)
+            reads.append(normRead)
+
+            # Calculate course using the weights:
+            P_input = self.weights[11] * target + self.weights[21] * normRead
+            P_output = self.squash_output(P_input)
+            
+            I_input = self.weights[12] * target + self.weights[22] * normRead
+            I_output = 0
+            if(-1 <= I_input and I_input <= 1):
+                I_output = I_input + self.prev_row[0]
+            else:
+                I_output = self.squash_output(I_input)
+            self.prev_row[0] = I_input
+
+            D_input = self.weights[13] * target + self.weights[23] * normRead
+            D_output = 0
+            if(-1 <= D_input and D_input <= 1):
+                D_output = D_input - self.prev_row[1]
+            else:
+                D_output = self.squash_output(D_input)
+            self.prev_row[1] = D_input
+
+            course = self.squash_output(self.weights[1] * P_output + self.weights[2] * I_output + self.weights[3] * D_output)
+
+            # Calculate the power each motor should be given and pass it to them.
+            for (motor, pow) in zip((self.leftM, self.rightM), self.steering2(course, self.power)):
+                motor.duty_cycle_sp = pow
+            sleep(0.01)  # Approx 100Hz
+            returnVal = self.mode_PID[self.mode](args)
+        
+        self.leftM.stop()
+        self.rightM.stop()
+
+        f = open(self.sensor_reads_path,'w')
+        for value in reads:
+            f.write(value)
+        f.close()
+
+        return True
+            
+        
 
 
-    def train_NN_PID(self):
-
-        val = self.cline.value()
-        self.initialize_prev_row(val)
 
 
 
@@ -209,5 +278,5 @@ if __name__ == "__main__":
     PID_obj = PID()
      # args[0] = waiting_time, args[1] = min_dist, args[2] = leftM, args[3] = rightM
     PID_obj.mode = "runForever"
-    PID_obj.generalPIDRun()
+    PID_obj.train_NN()
     # PID_obj.generalPIDRun(PID_obj.waiting_time,PID_obj.stop_dist_cm,PID_obj.leftM,PID_obj.rightM)
