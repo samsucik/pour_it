@@ -56,14 +56,11 @@ class PID_NN:
             return self.weights
 
     def save_and_backup_weights(self):
-        f1 = open(self.weights_path, 'w+')
+        f1 = open(self.weights_path, 'w')
         f2 = open(self.backup_path, 'a+')
-        line1 = str(self.weights[11]) + ' ' + \
-            str(self.weights[12]) + ' ' + str(self.weights[13])
-        line2 = str(self.weights[21]) + ' ' + \
-            str(self.weights[22]) + ' ' + str(self.weights[23])
-        line3 = str(self.weights[1]) + ' ' + \
-            str(self.weights[2]) + ' ' + str(self.weights[3])
+        line1 = str(self.weights[11]) + ' ' + str(self.weights[12]) + ' ' + str(self.weights[13]) + '\n'
+        line2 = str(self.weights[21]) + ' ' + str(self.weights[22]) + ' ' + str(self.weights[23]) + '\n'
+        line3 = str(self.weights[1]) + ' ' + str(self.weights[2]) + ' ' + str(self.weights[3]) + '\n'
         f1.write(line1)
         f2.write(line1)
         f1.write(line2)
@@ -123,8 +120,8 @@ class PID_NN:
         return row
 
     # Taken from: https://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
-    def isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
-        return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+    def isclose(self, a, abs_tol=0.01):
+        return a < abs_tol
 
     # LAST ROW MUST BE SHAVED !!!!
     def backprop(self):
@@ -133,7 +130,7 @@ class PID_NN:
 
         for k in range(1, len(self.ys)-1):
             denominator = self.params[k][1][4] - self.params[k-1][1][4]
-            if(self.isclose(denominator, 0, abs_tol=0.0001)):
+            if(self.isclose(denominator)):
                 continue
             # delta_i is minused already.
             delta_i = (self.ys[k] - self.target) * (self.ys[k+1]-self.ys[k]) / denominator
@@ -141,7 +138,7 @@ class PID_NN:
             for i in range(2):
                 for j in range(3):
                     denominator = self.params[k][0][j+1] - self.params[k-1][0][j+1]
-                    if(self.isclose(denominator, 0, abs_tol=0.0001)):
+                    if(self.isclose(denominator)):
                         continue
                     sigma_ij[i][j] = sigma_ij[i][j] + delta_i * self.weights[j+1] * (self.params[k+1][1][j+1] - self.params[k][1][j+1]) / denominator
 
@@ -166,6 +163,7 @@ class PID_NN:
                 self.params.append(self.one_pass(self.params[-1],y))
 
             self.backprop()
+            print(self.weights)
             self.save_and_backup_weights()
             return True
 

@@ -24,7 +24,7 @@ class PID:
         self.uhead = ev3.UltrasonicSensor()
 
         # Controls the base power to each one of the large motors.
-        self.power = 60
+        self.power = 50
 
         # Minimum and maximum reflected light intensity values.
         self.minRef = 10
@@ -63,9 +63,15 @@ class PID:
             self.weights = self.pid_nn.weights
             val = self.run_NN_PID_train()
             if(val):
+                ev3.Sound.speak('Training model; epoch ' + str(i))
                 self.pid_nn.train_model()
-                print('Epochs complete: ' + str(i))
-        print('Training complete.')
+                sleep(2)
+            if(i < epochs):
+                ev3.Sound.speak("Press any button to continue training.")
+                while(not self.btn.any()):
+                    x = time()
+            else:
+                ev3.Sound.speak("Training complete")
     
     def squash_output(self,value):
         if(value < -1):
@@ -83,6 +89,8 @@ class PID:
         self.prev_row = [0,0]
         reads = []
 
+        sleep(2)
+
         self.rightM.run_direct()
         self.leftM.run_direct()
 
@@ -94,6 +102,8 @@ class PID:
             # Normalized read.
             normRead = (refRead - self.minRef) / (self.maxRef - self.minRef)
             reads.append(normRead)
+            print(normRead)
+
 
             # Calculate course using the weights:
             P_input = self.weights[11] * target + self.weights[21] * normRead
@@ -124,6 +134,8 @@ class PID:
         
         self.leftM.stop()
         self.rightM.stop()
+        
+        print(reads)
 
         f = open(self.sensor_reads_path,'w')
         prev = 0
