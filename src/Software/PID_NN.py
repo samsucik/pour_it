@@ -13,7 +13,7 @@ class PID_NN:
         self.params = []  # neuron inputs and outputs; [[u12,u21,u22,u23,u31],[x12,x21,x22,x23,x31]]
         self.learning_rate = learning_rate  # start with 0.01 then vary the scale
         self.weights = dict()  # weights
-        weights_keys = [1, 2, 3, 11, 12, 13, 21, 22, 23]  # weights keys
+        weights_keys = [1, 2, 3, 11, 12, 13]  # weights keys
         for key in weights_keys:
             self.weights[key] = 0
 
@@ -46,25 +46,18 @@ class PID_NN:
         if(isfile(self.weights_path)):
             f = open(self.weights_path, 'r')
             lines = f.readlines()
-            self.weights[11], self.weights[12], self.weights[13] = map(
-                float, lines[0].split(" "))
-            self.weights[21], self.weights[22], self.weights[23] = map(
-                float, lines[1].split(" "))
-            self.weights[1], self.weights[2], self.weights[3] = map(
-                float, lines[2].split(" "))
+            self.weights[11], self.weights[12], self.weights[13] = map(float, lines[0].split(" "))
+            self.weights[1], self.weights[2], self.weights[3] = map(float, lines[1].split(" "))
             f.close()
             return self.weights
 
     def save_and_backup_weights(self):
         f1 = open(self.weights_path, 'w')
         f2 = open(self.backup_path, 'a+')
-        line1 = str(self.weights[11]) + ' ' + str(self.weights[12]) + ' ' + str(self.weights[13]) + '\n'
-        line2 = str(self.weights[21]) + ' ' + str(self.weights[22]) + ' ' + str(self.weights[23]) + '\n'
-        line3 = str(self.weights[1]) + ' ' + str(self.weights[2]) + ' ' + str(self.weights[3]) + '\n'
+        line1 = str(round(self.weights[11],4)) + ' ' + str(round(self.weights[12],4)) + ' ' + str(round(self.weights[13],4)) + '\n'
+        line3 = str(round(self.weights[1],4)) + ' ' + str(round(self.weights[2],4)) + ' ' + str(round(self.weights[3],4)) + '\n'
         f1.write(line1)
         f2.write(line1)
-        f1.write(line2)
-        f2.write(line2)
         f1.write(line3)
         f2.write(line3)
         f1.close()
@@ -76,14 +69,13 @@ class PID_NN:
         xs = []
         us.append(y)
         xs.append(self.squash_output(y))
-        us.append(self.weights[11] * self.target + self.weights[21] * us[0])
+        us.append(self.weights[11] * (self.target - us[0]))
         xs.append(self.squash_output(us[1]))
-        us.append(self.weights[12] * self.target + self.weights[22] * us[0])
+        us.append(self.weights[12] * (self.target - us[0]))
         xs.append(self.squash_output(us[2]))
-        us.append(self.weights[13] * self.target + self.weights[23] * us[0])
+        us.append(self.weights[13] * (self.target - us[0]))
         xs.append(self.squash_output(us[3]))
-        us.append(self.weights[1] * xs[1] + self.weights[2]
-                  * xs[2] + self.weights[3] * xs[3])
+        us.append(self.weights[1] * xs[1] + self.weights[2] * xs[2] + self.weights[3] * xs[3])
         xs.append(self.squash_output(us[4]))
         row.append(us)
         row.append(xs)
@@ -96,23 +88,22 @@ class PID_NN:
         xs = []
         us.append(y)
         xs.append(self.squash_output(y))
-        us.append(self.weights[11] * self.target + self.weights[21] * us[0])
+        us.append(self.weights[11] * (self.target - us[0]))
         xs.append(self.squash_output(us[1]))
 
-        us.append(self.weights[12] * self.target + self.weights[22] * us[0])
+        us.append(self.weights[12] * (self.target - us[0]))
         if(us[2] < -1 or us[2] > 1):
             xs.append(self.squash_output(us[2]))
         else:
             xs.append(us[2] + prev_row[0][2])
 
-        us.append(self.weights[13] * self.target + self.weights[23] * us[0])
+        us.append(self.weights[13] * (self.target - us[0]))
         if(us[3] < -1 or us[3] > 1):
             xs.append(self.squash_output(us[3]))
         else:
             xs.append(us[3] - prev_row[0][3])
 
-        us.append(self.weights[1] * xs[1] + self.weights[2]
-                  * xs[2] + self.weights[3] * xs[3])
+        us.append(self.weights[1] * xs[1] + self.weights[2] * xs[2] + self.weights[3] * xs[3])
         xs.append(self.squash_output(us[4]))
         row.append(us)
         row.append(xs)
@@ -126,7 +117,7 @@ class PID_NN:
     # LAST ROW MUST BE SHAVED !!!!
     def backprop(self):
         sigma_i = [0, 0, 0]
-        sigma_ij = [[0, 0, 0], [0, 0, 0]]
+        sigma_ij = [0, 0, 0]
 
         for k in range(1, len(self.ys)-1):
             denominator = self.params[k][1][4] - self.params[k-1][1][4]
@@ -135,18 +126,16 @@ class PID_NN:
             # delta_i is minused already.
             delta_i = (self.ys[k] - self.target) * (self.ys[k+1]-self.ys[k]) / denominator
             sigma_i = [sigma_i[i] + delta_i * self.params[k][1][i+1] for i in range(3)]
-            for i in range(2):
-                for j in range(3):
-                    denominator = self.params[k][0][j+1] - self.params[k-1][0][j+1]
-                    if(self.isclose(denominator)):
-                        continue
-                    sigma_ij[i][j] = sigma_ij[i][j] + delta_i * self.weights[j+1] * (self.params[k+1][1][j+1] - self.params[k][1][j+1]) / denominator
+            for j in range(3):
+                denominator = self.params[k][0][j+1] - self.params[k-1][0][j+1]
+                if(self.isclose(denominator)):
+                    continue
+                sigma_ij[j] = sigma_ij[j] + delta_i * self.weights[j+1] * (self.params[k+1][1][j+1] - self.params[k][1][j+1]) / denominator
 
         for i in range(1, 4):
             self.weights[i] = self.weights[i] - self.learning_rate * sigma_i[i-1]
-            for j in range(1,3):
-                id_ij = j*10 + i
-                self.weights[id_ij] = self.weights[id_ij] - self.learning_rate * sigma_ij[j-1][i-1]
+            id_ij = 10 + i
+            self.weights[id_ij] = self.weights[id_ij] - self.learning_rate * sigma_ij[i-1]
 
     def train_model(self):
         self.read_training_values()

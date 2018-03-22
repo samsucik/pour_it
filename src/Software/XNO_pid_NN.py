@@ -96,10 +96,10 @@ class PID:
             reads.append(normRead)
 
             # Calculate course using the weights:
-            P_input = self.weights[11] * target + self.weights[21] * normRead
+            P_input = self.weights[11] * (target - normRead)
             P_output = self.squash_output(P_input)
             
-            I_input = self.weights[12] * target + self.weights[22] * normRead
+            I_input = self.weights[12] * (target - normRead)
             I_output = 0
             if(-1 <= I_input and I_input <= 1):
                 I_output = I_input + self.prev_row[0]
@@ -107,7 +107,7 @@ class PID:
                 I_output = self.squash_output(I_input)
             self.prev_row[0] = I_input
 
-            D_input = self.weights[13] * target + self.weights[23] * normRead
+            D_input = self.weights[13] * (target - normRead)
             D_output = 0
             if(-1 <= D_input and D_input <= 1):
                 D_output = D_input - self.prev_row[1]
