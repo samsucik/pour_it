@@ -93,13 +93,16 @@ class PID:
 
             # Normalized read.
             normRead = (refRead - self.minRef) / (self.maxRef - self.minRef)
+            
             reads.append(normRead)
 
+            initial_input = self.squash_output(target - normRead)
+
             # Calculate course using the weights:
-            P_input = self.weights[11] * (target - normRead)
+            P_input = self.weights[11] * initial_input
             P_output = self.squash_output(P_input)
             
-            I_input = self.weights[12] * (target - normRead)
+            I_input = self.weights[12] * initial_input
             I_output = 0
             if(-1 <= I_input and I_input <= 1):
                 I_output = I_input + self.prev_row[0]
@@ -107,7 +110,7 @@ class PID:
                 I_output = self.squash_output(I_input)
             self.prev_row[0] = I_input
 
-            D_input = self.weights[13] * (target - normRead)
+            D_input = self.weights[13] * initial_input
             D_output = 0
             if(-1 <= D_input and D_input <= 1):
                 D_output = D_input - self.prev_row[1]
