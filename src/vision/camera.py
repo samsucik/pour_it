@@ -4,15 +4,21 @@ from time import sleep
 from multiprocessing import Process, Manager
 import cv2
 import os, os.path
+sys.path.insert(0, os.getcwd())
+# import Software.pour_it_utils
+
+from picamera.array import PiRGBArray
+from picamera import PiCamera
 
 class Camera():
-
     def __init__(self):
+        print(os.getcwd())
+        print(sys.path)
+        self.images_path = '' if os.getcwd().endswith('/vision') else 'vision/'
         self.running_on_pi = os.getcwd().startswith('/home/pi')
         self.running_on_dice = os.getcwd().startswith('/afs/inf.ed.ac.uk')
+        self.using_picamera = self.running_on_pi
         self.cam_fps = 10.0
-        self.cam_width = 160
-        self.cam_height = 120
         self.custom_shapes_names = ['triangle', 'heart', 'circle', 'star'] #, 'square', 'cross']
         self.custom_shapes_contours = dict()
         self.cam_id = 0 if self.running_on_pi or self.running_on_dice else 1 # 0 for default camera
@@ -33,21 +39,39 @@ class Camera():
         self.multi_thread_dict = dict()
 
 
+    # Only for the Logitech camera if we want multithreading
+    # for time-limited fresh image retrieving functionality 
+    # (note that it's been working fine without this multithreading 
+    # on Pi 3).
     def setup_multithreading(self):
         if self.multi_thread_dict is None:
             self.multi_thread_dict = Manager().dict()
 
 
+    # Makes sure that camera is running and ready. 
+    # If not, tries to start the camera until everything is OK.
     def check_camera(self):
+        print(self.camera)
         while not self.camera:
             print("Camera not found, setting it up")
             self.setup_camera()
 
-        while not self.camera.isOpened():
+        cam_open = True if self.using_picamera else self.camera.isOpened()
+        print("cam open: {}".format(self.camera._check_camera_open()))
+        while not cam_open:
             print("Camera not opened, opening it up")
-            self.camera.open(self.cam_id)
+            if self.using_picamera:
+                self.camera = PiCamera()
+                sleep(0.1)
+            else:
+                self.camera.open(self.cam_id)
+            cam_open = self.camera._check_camera_open() if self.using_picamera else self.camera.isOpened()
 
-        print("{}x{}".format(self.camera.get(cv2.CAP_PROP_FRAME_WIDTH), self.camera.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+        if self.using_picamera:
+            print("{}x{}".format(self.camera.resolution[0], self.camera.resolution[1]))
+        else:
+            print("{}x{}".format(self.camera.get(cv2.CAP_PROP_FRAME_WIDTH), self.camera.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+
 
     # Detects polygon with 3, 4, 5 or many sides in passed contour
     def detect_polygon(self, contour):
@@ -70,8 +94,7 @@ class Camera():
     # from the camera
     def load_custom_shapes(self):
         for n in self.custom_shapes_names:
-            # path = os.getcwd() + '/vision'
-            img = cv2.imread('vision/' + n + '.png')
+            img = cv2.imread(self.images_path + n + '.png')
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             _, contours, _ = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             self.custom_shapes_contours[n] = contours[0]
@@ -98,63 +121,99 @@ class Camera():
     # Returns a camera object with all important parameters set 
     # (resolution, FPS, contrast, B&W, etc)
     def setup_camera(self):
-        self.camera = cv2.VideoCapture(self.cam_id)
-        
-        self.check_camera()
+        if self.using_picamera:
+            self.cam_width = 600
+            self.cam_height = 200
+            self.camera = PiCamera()
+            # self.check_camera()
+            self.camera.color_effects = (128, 128) #B&w mode
+            self.camera.contrast = 70
+            self.camera.framerate = self.cam_fps
+            self.camera.resolution = (self.cam_width, self.cam_height)
+            # self.camera.resolution = (self.cam_width, self.cam_height)
+            self.camera.zoom = (0.15, 0.15, 0.7, 0.7)
+            self.cam_raw_capture = PiRGBArray(self.camera) #, size=(self.cam_width, self.cam_height)) 
+            
+            # allow the camera to warmup
+            time.sleep(1)
+        else:
+            self.cam_width = 160
+            self.cam_height = 120
+            self.camera = cv2.VideoCapture(self.cam_id)
+            
+            self.check_camera()
 
-        # Property codes from here:
-        # https://docs.opencv.org/2.4/modules/highgui/doc/reading_and_writing_images_and_video.html#videocapture-set
-        # REMEMBER to REMOVE the 'CV_' prefix
-        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.cam_width)
-        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cam_height)
-        self.camera.set(cv2.CAP_PROP_FPS, self.cam_fps)
-        self.camera.set(cv2.CAP_PROP_CONTRAST, 0.7)
-        self.camera.set(cv2.CAP_PROP_SATURATION, 0.0)
-        self.camera.set(cv2.CAP_PROP_GAIN, 0.0)
+            # Property codes from here:
+            # https://docs.opencv.org/2.4/modules/highgui/doc/reading_and_writing_images_and_video.html#videocapture-set
+            # REMEMBER to REMOVE the 'CV_' prefix
+            self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.cam_width)
+            self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cam_height)
+            self.camera.set(cv2.CAP_PROP_FPS, self.cam_fps)
+            self.camera.set(cv2.CAP_PROP_CONTRAST, 0.7)
+            self.camera.set(cv2.CAP_PROP_SATURATION, 0.0)
+            self.camera.set(cv2.CAP_PROP_GAIN, 0.0)
 
 
     # Closes the camera and destroys any graphical windows that 
     # have been generated
     def destroy_camera(self):
-        # time.sleep(0.3)
-        self.camera.release()
-        # time.sleep(0.3)
+        if self.using_picamera:
+            self.camera.close()
+            self.cam_raw_capture.truncate(0)
+        else:
+            self.camera.release()
 
         cv2.destroyAllWindows()
+
+
+    # Lowest-level capturing of an image from the camera.
+    def cam_read(self):
+        if self.using_picamera:
+            self.camera.capture(self.cam_raw_capture, format="bgr")
+            image = self.cam_raw_capture.array
+            self.cam_raw_capture.truncate(0)
+            return None, image
+        else:
+            r, image = self.camera.read()
+            return r, image
+
+
+    # Blurs and binarises passed image.
+    def apply_filters(self, image):
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        image = cv2.GaussianBlur(image, (5, 5), 0)
+        (thresh, image) = cv2.threshold(image, 60, 255, cv2.THRESH_BINARY_INV)
+
+        return image
 
 
     # Scans custom shapes using the camera and saves them into files. 
     # Does NOT overwrite existing files.
     def capture_custom_shapes(self):
         for n in self.custom_shapes_names:
-            fname = n + '.png'
+            fname = self.images_path + n + '.png'
             if not os.path.isfile(fname): 
                 wait_time = 3
                 for i in range(wait_time):
                     print("Taking a shot of {} in {}...".format(n, wait_time - i))
                     sleep(1)
 
-                # cam = self.setup_camera()
-                r, img_raw = self.camera.read()
-                cam.release()
-                img = cv2.cvtColor(img_raw, cv2.COLOR_BGR2GRAY)
-                img = cv2.GaussianBlur(img, (5, 5), 0)
-                (thresh, img) = cv2.threshold(img, 60, 255, cv2.THRESH_BINARY_INV)
-                
-                cv2.imwrite(fname, img)
+                r, img_raw = self.cam_read()
+                image = self.apply_filters(img_raw)
+                cv2.imwrite(fname, image)
 
 
-    # Displays simple live stream coming from the camera.
+    # Displays simple live stream coming from the camera (only on non-Pi devices)
     def stream_from_camera(self):
-        if self.running_on_pi:
-            print("Can't stream from the camera on Raspberry Pi!")
+        if self.using_picamera or self.running_on_pi:
+            print("Can't stream when running on Raspberry Pi!")
             return
-
-        while(self.camera.isOpened()):
-            ret, frame = self.camera.read()
-            cv2.imshow('frame', frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break    
+        else:
+            while(self.camera.isOpened()):
+                ret, frame = self.camera.read()
+                cv2.imshow('frame', frame)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break    
 
 
     # Decides which shapes are really present in the image stream.
@@ -187,37 +246,45 @@ class Camera():
     # until it hits a fresh image. How it does this: Uses empirical threshold
     # because it takes much longer to fetch image from the camera than it takes
     # to fetch it just from the buffer.
-    def get_fresh_image_from_camera(self, timeToRun=1.0, multiThread=True):
+    def get_fresh_image_from_camera(self, timeToRun=1.0, multiThread=False):
         self.check_camera()
 
-        total_start = time.time()
-        time_to_fetch = 0
-        self.multi_thread_dict['img'] = None
-        
-        if multiThread:
-            r, i = self.camera.read()
-
-        while time_to_fetch < self.cam_buffer_threshold and time.time() - total_start < timeToRun:
-            start = time.time()
-            img = None
+        if self.using_picamera:
+            _, image = self.cam_read()
+            return image
+        else:
+            total_start = time.time()
+            time_to_fetch = 0
             self.multi_thread_dict['img'] = None
             
             if multiThread:
-                cam_process = Process(target=self.read_from_camera, name="CamProcess", args=(self.multi_thread_dict, 0))
-                cam_process.start()
-                cam_process.join(timeToRun)
-                if cam_process.is_alive():
-                    cam_process.terminate()
-            else:
-                self.read_from_camera(self.multi_thread_dict)
+                r, i = self.camera.read()
 
-            time_to_fetch = time.time() - start
-            print("        ({:.4f})".format(time_to_fetch))
+            while time_to_fetch < self.cam_buffer_threshold and time.time() - \
+                total_start < timeToRun:
+                start = time.time()
+                img = None
+                self.multi_thread_dict['img'] = None
+                
+                if multiThread:
+                    cam_process = Process(target=self.read_from_logitech_camera, 
+                        name="CamProcess", args=(self.multi_thread_dict, 0))
+                    cam_process.start()
+                    cam_process.join(timeToRun)
+                    if cam_process.is_alive():
+                        cam_process.terminate()
+                else:
+                    self.read_from_logitech_camera(self.multi_thread_dict)
 
-        return self.multi_thread_dict['img']
+                time_to_fetch = time.time() - start
+                print("        ({:.4f})".format(time_to_fetch))
+
+            return self.multi_thread_dict['img']
     
 
-    def read_from_camera(self, return_dict, random_arg=0):
+    # Basic low-level reading used with the Logitech camera (developed 
+    # primarily for multithreading scenarios)
+    def read_from_logitech_camera(self, return_dict, random_arg=0):
         _, img = self.camera.read()
         return_dict['img'] = img
 
@@ -232,9 +299,7 @@ class Camera():
 
     def get_contours(self, img):
         # Pre-process the image
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        img = cv2.GaussianBlur(img, (5, 5), 0)
-        (thresh, img) = cv2.threshold(img, 60, 255, cv2.THRESH_BINARY_INV)
+        img = self.apply_filters(img)
         
         # Find all contours in the image
         img, contours, hierarchy = cv2.findContours(img, 
@@ -286,14 +351,17 @@ class Camera():
     # Processes the camera stream, looking for the specified shape. Can be restricted
     # to only run for a maximum of timeToRun seconds and then return None if the desired
     # shape was not detected.
-    def stream_and_detect(self, wantedShape, showStream=False, continuousStream=False, timeToRun=1.0, multiThread=True):
+    def stream_and_detect(self, wantedShape, showStream=False, continuousStream=False, timeToRun=1.0, multiThread=False):
         start = time.time()
         runAgain = True
         x_coordinate = None
         height = None
 
         if multiThread:
-            self.setup_multithreading()
+            if self.using_picamera:
+                print("WARNING: Multithreading not supported with Pi camera.")
+            else:
+                self.setup_multithreading()
 
         # Processes the live stream, for every snapshot detecting the shapes.
         while runAgain:
@@ -312,16 +380,19 @@ class Camera():
                 if best_contour is not None:
                     x_coordinate = self.get_x_position_of_contour(best_contour)
                     height = self.get_contour_height(best_contour)
+                    print("Height of best contour: {}px".format(self.get_contour_height(best_contour)))
 
 
                 if showStream:
-                    img = self.draw_contour(img, best_contour, wantedShape)
-                    # Show the captured image with added shape contours 
-                    # and possibly shape labels as well
-                    print("Height: {}px".format(self.get_contour_height(best_contour)))
-                    cv2.imshow("Image", img)
-                    if cv2.waitKey(1) & 0xFF == ord('q'):
-                        break
+                    if self.running_on_pi:
+                        print("WARNING: Cannot show stream from camera on Raspberry Pi!")
+                    else:
+                        # Show the captured image with added shape contours 
+                        # and possibly shape labels as well
+                        img = self.draw_contour(img, best_contour, wantedShape)
+                        cv2.imshow("Image", img)
+                        if cv2.waitKey(1) & 0xFF == ord('q'):
+                            break
 
                 if best_contour is not None and not continuousStream:
                     return x_coordinate, height
@@ -332,17 +403,15 @@ class Camera():
                 print("...timing out ({:.3f}), {} not spotted :-(...".format(run_time, wantedShape))
             else:
                 pass
+
         return x_coordinate, height
 
 
     def read_shape_from_card(self):
-        img = self.get_fresh_image_from_camera(timeToRun=2.0, multiThread=False)
-        # print("image: {}found".format("not" if img is None else ""))
+        img = self.get_fresh_image_from_camera(timeToRun=2.0)
         if img is not None:
             contours, _ = self.get_contours(img)
-            # print("{} contours".format(len(contours)))
             contour, label = self.find_most_salient_contour(contours)
-            # print(contour, label)
             height = self.get_contour_height(contour)
             return label, height
         else:
@@ -353,25 +422,6 @@ class Camera():
         x, y, w, h = cv2.boundingRect(contour)
         return h
 
-
-    # Simple showcase of what this class can do.
-    def demo(self):
-        self.capture_custom_shapes()
-        self.load_custom_shapes()
-
-        shape = 'heart'
-
-        # self.stream_from_camera()
-
-        for i in range(1000):
-            x, _ = self.stream_and_detect(wantedShape=shape, showStream=True, continuousStream=False, multiThread=False)
-            
-            if x:
-                print("Position of {}: {}px.".format(shape, x))
-            else:
-                print(":-(")
-
-        self.destroy_camera()
 
     def read_shapes_for_confmtrx(self, distance):
         with open("shapes_" + str(distance) + "cm.txt", "w") as f:
@@ -390,6 +440,7 @@ class Camera():
                         if shape is not None:
                             shapeCounter += 1
                     f.write(name + "," + shape + "\n")
+
 
     def get_desired_shape(self, offset=6):
         shape = None
@@ -410,9 +461,29 @@ class Camera():
 
         return shape
 
+
+    # Simple showcase of what this class can do.
+    def demo(self):
+        self.capture_custom_shapes()
+        self.load_custom_shapes()
+
+        shape = 'heart'
+
+        self.stream_from_camera()
+
+        for i in range(1000):
+            x, _ = self.stream_and_detect(wantedShape=shape, showStream=True, continuousStream=False, multiThread=False)
+            
+            if x:
+                print("Position of {}: {}px.".format(shape, x))
+            else:
+                print(":-(")
+
+        self.destroy_camera()
+
 if __name__ == "__main__":
     cam = Camera()
-    cam.load_custom_shapes()
+    # cam.load_custom_shapes()
 
     # cam.get_desired_shape()
 
