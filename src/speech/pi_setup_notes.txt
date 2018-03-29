@@ -1,6 +1,0 @@
-workon cv
-pip install SpeechRecognition
-sudo apt-get install portaudio19-dev
-pip install pyaudio
-sudo apt-get install flac
-python -m speech_recognition
