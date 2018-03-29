@@ -7,25 +7,27 @@ import time
 
 gripper = ev3.MediumMotor("outA")
 touchSensor = ev3.TouchSensor()
-rightM = ev3.LargeMotor('outC')
-leftM = ev3.LargeMotor('outD')
+# rightM = ev3.LargeMotor('outC')
+# leftM = ev3.LargeMotor('outD')
+opener = ev3.MediumMotor("outC")
+arm = ev3.MediumMotor("outD")
 pourer = ev3.LargeMotor('outB')
 
-def driveForward(speed):
-    rightM.run_forever(speed_sp=speed)
-    leftM.run_forever(speed_sp=speed)
-
-def driveBackward(speed):
-    rightM.run_forever(speed_sp=speed)
-    leftM.run_forever(speed_sp=speed)
-
-def turnRight90():
-    rightM.run_forever(speed_sp=-200)
-    leftM.run_forever(speed_sp=200)
-
-def turnLeft90():
-    rightM.run_forever(speed_sp=200)
-    leftM.run_forever(speed_sp=-200)
+# def driveForward(speed):
+#     rightM.run_forever(speed_sp=speed)
+#     leftM.run_forever(speed_sp=speed)
+#
+# def driveBackward(speed):
+#     rightM.run_forever(speed_sp=speed)
+#     leftM.run_forever(speed_sp=speed)
+#
+# def turnRight90():
+#     rightM.run_forever(speed_sp=-200)
+#     leftM.run_forever(speed_sp=200)
+#
+# def turnLeft90():
+#     rightM.run_forever(speed_sp=200)
+#     leftM.run_forever(speed_sp=-200)
 
 # gripper.run_timed(speed_sp=400, time_sp=2000)
 def openGripper():
@@ -51,6 +53,14 @@ def startPouring():
 def returnPourer():
     pourer.run_forever(speed_sp=50)
 
+def armExtend():
+    arm.run_forever(speed_sp=-200)
+
+def armReturn():
+    arm.run_forever(speed_sp=200)
+
+def openerBottle():
+    opener.run_forever(speed_sp=800)
 
 # -------- Run section -------
 
@@ -60,7 +70,7 @@ def returnPourer():
 btn = ev3.Button()
 
 # gripper.run_timed(speed_sp=200, time_sp=3000)
-
+##### hit enter to stop pourer
 while True:
     k = input("input char: ")
     if k == "w":
@@ -68,23 +78,34 @@ while True:
     elif k == "s":
         closeGripper()
     elif k == "\x1b[A":
-        driveForward(200)
+        armExtend()
+        # driveForward(200)
     elif k == "\x1b[B":
-        driveBackward(-200)
+        armReturn()
+        # driveBackward(-200)
     elif k == "\x1b[C":
-        turnRight90()
+        pass
+        # turnRight90()
     elif k == "\x1b[D":
-        turnLeft90()
+        pass
+        # turnLeft90()
     elif k == "p":
         startPouring()
     elif k == "l":
         returnPourer()
     elif k == "g":
        gripper.stop()
+    elif k == "z":
+        arm.stop()
+    elif k == "q":
+        openerBottle()
     else:
-        pourer.stop()
-        leftM.stop()
-        rightM.stop()
+        pourer.stop(stop_action="hold")
+        opener.stop()
+        arm.stop()
+        # leftM.stop()
+        # rightM.stop()
+
 
 
 # waitFortouch()

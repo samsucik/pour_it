@@ -62,7 +62,6 @@ def slow_approach():
 
     ev3proxy.motors_stop()
 
-
 ########## code segment #########
 ev3.Sound.speak("Hello and welcome to the demo")
 
@@ -93,6 +92,7 @@ pid = run.Popen(["python3", "XNO_pid_slow.py"])
 # activate camera to detect shape user has presented
 x = None
 i = 0
+# TODO: add check of colour sensor in the loo so that if it does not detect a shape
 while x is None:
     x, height = cam.stream_and_detect(wantedShape=shape, showStream=True,multiThread=False)
     print("shape detected: " + str(x))
@@ -133,12 +133,14 @@ closeGripper()
 # wait until bottle is gripped before lifting
 sleep(1)
 ev3.Sound.speak("lifting bottle")
+
 # lift bottle out of the way of ultra sonic sensor
 pourer.liftPourer()
 
 sleep(13)
 
 ev3.Sound.speak("moving back to line")
+
 # go back to line
 turn.goBack2Phase(motors_power=80)
 ev3proxy.motors_stop()
@@ -147,7 +149,8 @@ ev3proxy.motors_stop()
 pid = run.Popen(["python3", "XNO_pid.py"])
 
 # wait until pid returns us to the start
-while not uhead.distance_centimeters < 14:
+# indicated by the blue tape marker
+while not (atStartSensor.value() == 2):
     pass
 
 # stop pid that is running arround the loop
@@ -170,7 +173,7 @@ pid = run.Popen(["python3", "XNO_pid.py"])
 # value of 5 equals red
 # wait until red marker is seen 
 while not(atStartSensor.value() == 5):
-    True
+    pass
 
 # stop motors and stop pid
 ev3proxy.motors_stop()
@@ -192,7 +195,6 @@ ev3.Sound.speak("bottle returned")
 sleep(2)
 
 ev3.Sound.speak("I'm finished. UGHHHHHHH").wait()
-
 
 # clean up code
 cam.destroy_camera()

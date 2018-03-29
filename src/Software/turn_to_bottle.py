@@ -5,8 +5,6 @@ ev3 = conn.modules['ev3dev.ev3'] #import ev3dev.ev3
 ev3proxy = conn.modules['ev3_proxy']
 from time import time, sleep
 import math
-import sys
-import json
 
 class turn_to_bottle:
 
@@ -25,7 +23,7 @@ class turn_to_bottle:
         self.rightm = []
 
     #returns speed multiplier for the motor to ramp up
-    def step_turn(self,x_coord):
+    def step_turn(self, x_coord):
         proportion = float((x_coord/float(self.camera_aspect_width))*100)
         print(x_coord)
         print(proportion)
@@ -48,7 +46,7 @@ class turn_to_bottle:
         else:
             return 0
 
-    def drive(self,force):
+    def drive(self, force):
         speed_rightM = self.base_speed
         speed_leftM = self.base_speed
         if force >= 0:
@@ -109,12 +107,6 @@ class turn_to_bottle:
 
     def goBackUntilLine(self, motors_power, break_value, stopOn="black"):
         stopOnOperator = 1 if stopOn == "black" else -1
-        # self.leftM.run_direct()
-        # self.rightM.run_direct()
-        # self.leftM.duty_cycle_sp = -motors_power
-        # self.rightM.duty_cycle_sp = -motors_power]
-        # self.leftM.run_forever(speed_sp=-motors_power)
-        # self.rightM.run_forever(speed_sp=-motors_power)
         ev3proxy.motors_run(speed=-motors_power)
         while True:
             start_time = time()
