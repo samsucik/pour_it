@@ -1,4 +1,4 @@
-<img src="logo/pourit_logo.png" width="200" alt="pour_it logo" style="display: block" align="left">
+<img src="logo/logo.png" width="200" alt="pour_it logo" style="display: block" align="left">
 
 <br/><br/>
 <br/><br/>
