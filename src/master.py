@@ -12,7 +12,7 @@ ev3 = conn.modules['ev3dev.ev3']
 
 ev3proxy = conn.modules['ev3_proxy']
 
-def test_opener()
+def test_opener():
     opener_motor = ev3.MediumMotor('outA')
     arm_motor = ev3.MediumMotor('outB')
     pourer = ev3.LargeMotor('outC') 
@@ -104,9 +104,9 @@ pid = run.Popen(["python3", "XNO_pid_slow.py"])
 # activate camera to detect shape user has presented
 x = None
 i = 0
-# TODO: add check of colour sensor in the loo so that if it does not detect a shape
+# TODO: add check of colour sensor in the loop so that if it does not detect a shape
 while x is None:
-    x, height = cam.stream_and_detect(wantedShape=shape, showStream=False,multiThread=False)
+    x, height = cam.stream_and_detect(wantedShape=shape, showStream=False, multiThread=False)
     print("shape detected: " + str(x))
     if ((x is not None) and i < 2 ):
         i += 1
@@ -114,6 +114,11 @@ while x is None:
     # changes thresh holds for bottle approach and bottle align
     if (height is not None )and height < 11:
         x = None
+    if atStartSensor.value() == 5:
+        ev3.Sound.speak("Your bottle has not been found").wait()
+        ev3.Sound.speak("Robot has finished")
+        sys.exit(0)
+
 
 # kill PID process on brick when camera finds bottle stop motors all they will still run
 pid.kill()
