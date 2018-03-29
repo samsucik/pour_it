@@ -6,11 +6,23 @@ from Software.turn_to_bottle import *
 
 # remote python setup
 import rpyc
-conn = rpyc.classic.connect('ev3dev')
+conn = rpyc.classic.connect('ev3dev.local')
 run = conn.modules['subprocess']
 ev3 = conn.modules['ev3dev.ev3']
 
 ev3proxy = conn.modules['ev3_proxy']
+
+def test_opener()
+    opener_motor = ev3.MediumMotor('outA')
+    arm_motor = ev3.MediumMotor('outB')
+    pourer = ev3.LargeMotor('outC') 
+    arm_motor.run_timed(speed_sp=200, time_sp=1000)
+    # opener_motor.run_timed(speed_sp=200, time_sp=1000)
+    # pourer.run_timed(time_sp=14000, speed_sp=-50)
+
+
+test_opener()
+sys.exit(0)
 
 cam = Camera()
 
@@ -94,7 +106,7 @@ pid = run.Popen(["python3", "XNO_pid_slow.py"])
 x = None
 i = 0
 while x is None:
-    x, height = cam.stream_and_detect(wantedShape=shape, showStream=True,multiThread=False)
+    x, height = cam.stream_and_detect(wantedShape=shape, showStream=False,multiThread=False)
     print("shape detected: " + str(x))
     if ((x is not None) and i < 2 ):
         i += 1
@@ -172,7 +184,7 @@ pid = run.Popen(["python3", "XNO_pid.py"])
 while not(atStartSensor.value() == 5):
     True
 
-# stop motors and stop pid
+# stop motors and kill
 ev3proxy.motors_stop()
 pid.kill()
 ev3proxy.motors_stop()
