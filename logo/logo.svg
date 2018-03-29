@@ -9,14 +9,14 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="215.1506mm"
-   height="127.26828mm"
-   viewBox="0 0 762.34464 450.95057"
+   width="181.14436mm"
+   height="95.661247mm"
+   viewBox="0 0 641.85009 338.95716"
    id="svg2"
    version="1.1"
    inkscape:version="0.91 r13725"
    sodipodi:docname="logo.svg"
-   inkscape:export-filename="/home/samo/edi/sdp/pour_it/logo/pourit_stickers"
+   inkscape:export-filename="/home/samo/edi/sdp/pour_it/logo/logo.png"
    inkscape:export-xdpi="140.22"
    inkscape:export-ydpi="140.22">
   <defs
@@ -29,8 +29,8 @@
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
      inkscape:zoom="0.67882252"
-     inkscape:cx="375.20474"
-     inkscape:cy="180.03985"
+     inkscape:cx="417.33992"
+     inkscape:cy="119.7918"
      inkscape:document-units="px"
      inkscape:current-layer="g4233"
      showgrid="false"
@@ -39,10 +39,10 @@
      inkscape:window-x="0"
      inkscape:window-y="30"
      inkscape:window-maximized="1"
-     fit-margin-top="10"
-     fit-margin-left="10"
-     fit-margin-right="10"
-     fit-margin-bottom="10"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
      borderlayer="true"
      showguides="false" />
   <metadata
@@ -61,7 +61,7 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(-798.3592,-876.80257)">
+     transform="translate(-858.60718,-928.54793)">
     <g
        id="g4203">
       <g
