@@ -8,18 +8,14 @@ from time import  sleep
 class Pouring:
 
     def __init__(self):
-        self.gripper = brick2.MediumMotor("outA")
         self.pourer = brick2.LargeMotor('outB')
         self.touchSensor = brick2.TouchSensor()
 
-    def openGripper(self):
-        self.gripper.run_forever(speed_sp=-100)
-
-    def closeGripper(self):
-        self.gripper.run_forever(speed_sp=200)
-
     def startPouring(self):
         self.pourer.run_forever(speed_sp=-50)
+
+    def timedLift(self, time):
+        self.pourer.run_timed(speed=-50,time_sp=time)
 
     def stopPourer(self):
         print("STOP Pourer")
@@ -37,13 +33,6 @@ class Pouring:
         self.pourer.run_timed(time_sp=5000, speed_sp=-70)
         sleep(7)
         self.pourer.run_timed(time_sp=5000, speed_sp=70)
-
-    # def returnPourer(self):
-    #     self.gripper.run_forever(speed_sp=200)
-    #     self.pourer.run_forever(speed_sp=50)
-    #     self.stopPourer()
-
-
 
 if __name__ == '__main__':
     p = Pouring()

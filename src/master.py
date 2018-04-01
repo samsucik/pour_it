@@ -3,6 +3,7 @@ import sys
 from vision.camera import *
 from Software.pouring import *
 from Software.turn_to_bottle import *
+from speech.Speech import *
 
 # remote python setup
 import rpyc
@@ -90,9 +91,11 @@ openGripper()
 sleep(2)
 gripper.stop()
 
-leftM.stop()
-rightM.stop()
+# make sure wheels are stopped
+ev3proxy.motors_stop()
 
+# gets shape from the user
+# TODO: change to speech class method
 shape = cam.get_desired_shape()
 
 print(shape)
@@ -100,6 +103,9 @@ brick2.Sound.speak("Your shape was " + shape)
 sleep(4)
 brick2.Sound.speak("please remove card")
 sleep(2)
+
+# lift gripper out of the way of camera
+pourer.timedLift(2000)
 
 # start pid to move robot pass camera so pid can check for shape as it travels
 pid = run.Popen(["python3", "XNO_pid_slow.py"])
@@ -141,6 +147,9 @@ turn.adjust_angle(cam, shape, tol=range(79, 82), time_to_run=100)
 
 # open gripper
 openGripper()
+
+# return gripper to lowest point
+pourer.stopPourer()
 
 # slow approach code
 slow_approach()
