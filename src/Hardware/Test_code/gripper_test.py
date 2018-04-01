@@ -63,19 +63,17 @@ def armReturn():
 def openerBottle():
     opener.run_forever(speed_sp=800)
 
-
 def lift_open_demo():
-	closeGripper()
-	sleep(4)
-	pourer.run_timed(speed_sp=-50, time_sp=11000)
-	sleep(11)
-	opener.run_timed(speed_sp=800, time_sp=(20000+12000))
-	arm.run_timed(speed_sp=400, time_sp=20000)
-	sleep(20+12)
-	pourer.run_timed(speed_sp=50, time_sp=5000)
-	sleep(5)
-	arm.run_timed(speed_sp=-600, time_sp=13400)
-
+    closeGripper()
+    sleep(4)
+    pourer.run_timed(speed_sp=-50, time_sp=11000)
+    sleep(11)
+    opener.run_timed(speed_sp=800, time_sp=(20000+12000))
+    arm.run_timed(speed_sp=400, time_sp=20000)
+    sleep(20+12)
+    pourer.run_timed(speed_sp=50, time_sp=5000)
+    sleep(5)
+    arm.run_timed(speed_sp=-600, time_sp=13400)
 
 # -------- Run section -------
 

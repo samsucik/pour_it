@@ -1,7 +1,7 @@
 # !/usr/bin/env python3
 import rpyc
-conn = rpyc.classic.connect('ev3dev') #host name or IP address of EV3
-ev3 = conn.modules['ev3dev.ev3'] #import ev3dev.ev3
+conn = rpyc.classic.connect('ev3dev1.local') #host name or IP address of EV3
+brick1 = conn.modules['ev3dev.ev3'] #import ev3dev.ev3
 ev3proxy = conn.modules['ev3_proxy']
 from time import time, sleep
 import math
@@ -9,13 +9,13 @@ import math
 class turn_to_bottle:
 
     def __init__(self):
-        self.leftM = ev3.LargeMotor('outC')
-        self.rightM = ev3.LargeMotor('outD')
-        self.cline = ev3.ColorSensor()
+        self.leftM = brick1.LargeMotor('outC')
+        self.rightM = brick1.LargeMotor('outD')
+        self.cline = brick1.ColorSensor()
         self.cline.mode = 'COL-REFLECT'
         self.leftM.run_direct()
         self.rightM.run_direct()
-        self.ultrasonic = ev3.UltrasonicSensor()
+        self.ultrasonic = brick1.UltrasonicSensor()
         self.camera_aspect_width = 160
         self.base_speed = 0
         self.turn_speed_boost = 55

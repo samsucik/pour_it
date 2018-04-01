@@ -1,16 +1,16 @@
 #remote python call setup
 import rpyc
-conn = rpyc.classic.connect('ev3dev') #host name or IP address of EV3
-ev3 = conn.modules['ev3dev.ev3'] #import ev3dev.ev3
+conn = rpyc.classic.connect('ev3dev2.local') #host name or IP address of EV3
+brick2 = conn.modules['ev3dev.ev3'] #import ev3dev.ev3
 
 from time import  sleep
 
 class Pouring:
 
     def __init__(self):
-        self.gripper = ev3.MediumMotor("outA")
-        self.pourer = ev3.LargeMotor('outB')
-        self.touchSensor = ev3.TouchSensor()
+        self.gripper = brick2.MediumMotor("outA")
+        self.pourer = brick2.LargeMotor('outB')
+        self.touchSensor = brick2.TouchSensor()
 
     def openGripper(self):
         self.gripper.run_forever(speed_sp=-100)
@@ -31,7 +31,7 @@ class Pouring:
                 break
 
     def liftPourer(self):
-        self.pourer.run_timed(time_sp=14000, speed_sp=-50)
+        self.pourer.run_timed(time_sp=11000, speed_sp=-50)
 
     def pour_it(self):
         self.pourer.run_timed(time_sp=5000, speed_sp=-70)
