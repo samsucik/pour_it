@@ -15,6 +15,7 @@ class Speech():
     def __init__(self):
         # self.setup_tts()
         self.set_up_speech_recogniser()
+        self.phrase_file_name = "phrase.raw"
 
         self.sphinx_model_path = os.path.join(get_model_path(), 'en-us')
         print(self.sphinx_model_path)
@@ -25,11 +26,11 @@ class Speech():
 
     def set_up_speech_recogniser(self):
         self.recognizer = sr.Recognizer()
-        with sr.Microphone(device_index=0, sample_rate=16000) as source:
-            self.recognizer.adjust_for_ambient_noise(source)
+        self.recognizer.dynamic_energy_threshold = False
+        self.recognizer.energy_threshold = 600
 
 
-    def record_phrase(self):
+    def record_phrase(self, fname="phrase.raw"):
         with sr.Microphone(device_index=0, sample_rate=16000) as source:
             audio = self.recognizer.listen(source)
             with open("phrase.raw", "wb") as f:
@@ -53,7 +54,7 @@ class Speech():
 
 
     def get_spoken_utterance(self):
-        self.record_phrase()
+        self.record_phrase(fname=self.phrase_file_name)
         # speech = LiveSpeech(
         #     # audio_device='hw:0',
         #     verbose=False,
@@ -68,7 +69,7 @@ class Speech():
         # )
 
         speech = AudioFile(
-            audio_file="phrase.raw",
+            audio_file=self.phrase_file_name,
             verbose=False,
             # sampling_rate=16000,
             buffer_size=2048,
@@ -81,7 +82,10 @@ class Speech():
         )
         words = set()
         for phrase in speech:
-            # print("{} ({})".format(phrase, phrase.probability()))
+            with open("stats.txt", "a+") as f:
+                f.write("\n" + str(phrase.segments(detailed=True)))
+                print(phrase.segments(detailed=True))
+            print("{} ({})".format(phrase, phrase.probability()))
             for word in str(phrase).split(' '):
                 words.add(word.strip())
         if len(words) > 0:
@@ -90,15 +94,18 @@ class Speech():
         return words
 
 
-    def choose_one_from_list(self, words, options):
+    def choose_one_from_list(self, words, options, allow_multiple=False):
         detected_options = set()
         for word in words:
             if word in options:
                 detected_options.add(word)
-        if len(detected_options) == 0 or len(detected_options) > 1:
+        
+        if len(detected_options) == 0:
             return None
-        else:
+        elif len(detected_options) == 1 or allow_multiple:
             return list(detected_options)[0]
+        else:
+            return None
 
 
     def greet_user(self):
@@ -117,7 +124,6 @@ class Speech():
                     self.say("You want {}, correct?".format(drink_option))
                     utterance = self.get_spoken_utterance()
                     yes_no_option = self.choose_one_from_list(utterance, self.yes_no_options)
-                    yes_no_option
                     if yes_no_option == "OK":
                         self.say("Perfect, I will give you some {}.".format(drink_option))
                         return drink_option
