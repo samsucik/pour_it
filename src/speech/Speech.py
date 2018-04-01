@@ -7,9 +7,9 @@ from pocketsphinx import AudioFile
 import speech_recognition as sr
 
 # remote python setup
-# import rpyc
-# conn = rpyc.classic.connect('ev3dev')
-# ev3 = conn.modules['ev3dev.ev3']
+import rpyc
+conn2 = rpyc.classic.connect('ev3dev')
+brick2 = conn2.modules['ev3dev.ev3']
 
 class Speech():
     def __init__(self):
@@ -23,12 +23,10 @@ class Speech():
         self.drink_options = set({"WATER", "MEDICINE", "LEMONADE"})
         self.yes_no_options = set({"OK", "NO"})
 
-
     def set_up_speech_recogniser(self):
         self.recognizer = sr.Recognizer()
         self.recognizer.dynamic_energy_threshold = False
         self.recognizer.energy_threshold = 600
-
 
     def record_phrase(self, fname="phrase.raw"):
         with sr.Microphone(device_index=0, sample_rate=16000) as source:
@@ -37,21 +35,19 @@ class Speech():
                 f.write(audio.get_raw_data())
         print("...")
 
-
     # def setup_tts(self):
     #     self.tts_engine = pyttsx.init()
     #     rate = self.tts_engine.getProperty('rate')
     #     self.tts_engine.setProperty('rate', rate-50)
     #     self.tts_engine.setProperty('voice', 'english')
 
-
     def say(self, utterance):
         # l = len(utterance)
         # self.tts_engine.say(utterance)
         # self.tts_engine.runAndWait()
-        print(utterance)
-        # ev3.Sound.speak(utterance)
-
+        # print(utterance)
+        # waiting here might break everything
+        brick2.Sound.speak(utterance).wait()
 
     def get_spoken_utterance(self):
         self.record_phrase(fname=self.phrase_file_name)
@@ -93,7 +89,6 @@ class Speech():
 
         return words
 
-
     def choose_one_from_list(self, words, options, allow_multiple=False):
         detected_options = set()
         for word in words:
@@ -107,10 +102,8 @@ class Speech():
         else:
             return None
 
-
     def greet_user(self):
         print("\nHello, dear friend! I am your intelligent assistant YARR.\n")
-
 
     def get_drink_option(self):
         utterance = None
@@ -135,9 +128,9 @@ class Speech():
             else:
                 self.say("Sorry, which drink do you want?")
 
-
-speech = Speech()
-speech.greet_user()
-while True:
-    drink_option = speech.get_drink_option()
-# print("\nUSER WANTS: {}".format(drink_option))
+if __name__ == '__main__':
+    speech = Speech()
+    speech.greet_user()
+    while True:
+        drink_option = speech.get_drink_option()
+    # print("\nUSER WANTS: {}".format(drink_option))

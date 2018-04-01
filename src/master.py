@@ -17,8 +17,6 @@ brick2 = conn2.modules['ev3dev.ev3']
 run = conn2.modules['subprocess']
 ev3proxy = conn2.modules['ev3_proxy']
 
-cam = Camera()
-
 ######## brick 1 objects ########
 arm = brick1.MediumMotor("outD")
 opener = brick1.MediumMotor("outC")
@@ -34,11 +32,15 @@ atStartSensor = brick2.ColorSensor('in4')
 # 0=unknown, 1=black, 2=blue, 3=green, 4=yellow, 5=red, 6=white, 7=brown
 atStartSensor.mode = 'COL-COLOR'
 
+# component objects created
+
 # set up camera, setup turning, setup pouring
 # cam.capture_custom_shapes()
+cam = Camera()
 cam.load_custom_shapes()
 turn = turn_to_bottle()
 pourer = Pouring()
+speechRecog = Speech()
 
 def openGripper():
     gripper.run_forever(speed_sp=-100)
@@ -96,7 +98,14 @@ ev3proxy.motors_stop()
 
 # gets shape from the user
 # TODO: change to speech class method
-shape = cam.get_desired_shape()
+# shape = cam.get_desired_shape()
+
+# using speech class to get users selection of drink
+drink_option = speechRecog.get_drink_option()
+
+# TODO: drinks option to shape
+drink_to_shape = {'WATER': 'heart', 'MEDICINE': 'triangle', 'LEMONADE': 'circle'}
+shape = drink_to_shape[drink_option]
 
 print(shape)
 brick2.Sound.speak("Your shape was " + shape)
