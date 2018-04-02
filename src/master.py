@@ -42,6 +42,10 @@ turn = turn_to_bottle()
 pourer = Pouring()
 speechRecog = Speech()
 
+# global variables
+height_threshold = 40
+cam_offset = 15
+
 def openGripper():
     gripper.run_forever(speed_sp=-100)
 
@@ -53,11 +57,15 @@ def approach_bottle(shape):
     ev3proxy.motors_run(speed=50)
     # If within 10 centimeters stop
     # make more harsh on pi
+    print ("In bottle approach")
     while uhead.distance_centimeters > 12:
+        print("Still approaching")
         x, _ = cam.stream_and_detect(wantedShape=shape, showStream=True, continuousStream=False, timeToRun=1)
         if x is not None:
             # re-adjust alignment if shape moves more than 5 centers either way
-            if x < 77 or x > 83:
+            print()
+            if x < cam.cam_width - cam_offset or x > cam.cam_width + cam_offset:
+                print("re-aligning to bottle")
                 ev3proxy.motors_stop()
                 turn.adjust_angle(cam, shape)
                 # leftM.run_timed(speed_sp=100, time_sp=200)
@@ -81,20 +89,20 @@ def openBottle():
     sleep(13.4)
 
 ########## code segment #########
-brick2.Sound.speak("Hello and welcome to the demo")
+#brick2.Sound.speak("Hello and welcome to the demo")
 
-sleep(3)
+#sleep(3)
 
 # receive shape from user
-brick2.Sound.speak("please present card").wait()
+#brick2.Sound.speak("please present card").wait()
 
 # make sure gripper is open before searching for a bottle
-openGripper()
-sleep(2)
-gripper.stop()
+#openGripper()
+#sleep(2)
+#gripper.stop()
 
 # make sure wheels are stopped
-ev3proxy.motors_stop()
+#ev3proxy.motors_stop()
 
 # gets shape from the user
 # TODO: change to speech class method
@@ -109,8 +117,6 @@ shape = drink_to_shape[drink_option]
 
 print(shape)
 brick2.Sound.speak("Your shape was " + shape)
-sleep(4)
-brick2.Sound.speak("please remove card")
 sleep(2)
 
 # lift gripper out of the way of camera
@@ -129,7 +135,7 @@ while x is None:
         i += 1
         x = None
     # changes thresh holds for bottle approach and bottle align
-    if (height is not None )and height < 11:
+    if (height is not None )and height < height_threshold:
         x = None
     if atStartSensor.value() == 5:
         brick2.Sound.speak("Your bottle has not been found").wait()
@@ -152,7 +158,7 @@ approach_bottle(shape)
 brick2.Sound.speak("bottle approached")
 
 # initialise slow approach after alignment
-turn.adjust_angle(cam, shape, tol=range(79, 82), time_to_run=100)
+turn.adjust_angle(cam, shape, tol=range(cam.cam_width-cam_offset,cam.cam_width+cam_offset), time_to_run=100)
 
 # open gripper
 openGripper()

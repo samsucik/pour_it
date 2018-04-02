@@ -8,7 +8,7 @@ import speech_recognition as sr
 
 # remote python setup
 import rpyc
-conn2 = rpyc.classic.connect('ev3dev')
+conn2 = rpyc.classic.connect('ev3dev2.local')
 brick2 = conn2.modules['ev3dev.ev3']
 
 class Speech():
@@ -16,7 +16,8 @@ class Speech():
         # self.setup_tts()
         self.set_up_speech_recogniser()
         self.phrase_file_name = "phrase.raw"
-
+        print(os.getcwd())
+        self.path_prefix = '' if os.getcwd().endswith('speech') else 'speech/'
         self.sphinx_model_path = os.path.join(get_model_path(), 'en-us')
         print(self.sphinx_model_path)
 
@@ -31,7 +32,7 @@ class Speech():
     def record_phrase(self, fname="phrase.raw"):
         with sr.Microphone(device_index=0, sample_rate=16000) as source:
             audio = self.recognizer.listen(source)
-            with open("phrase.raw", "wb") as f:
+            with open(self.path_prefix + "phrase.raw", "wb") as f:
                 f.write(audio.get_raw_data())
         print("...")
 
@@ -45,9 +46,10 @@ class Speech():
         # l = len(utterance)
         # self.tts_engine.say(utterance)
         # self.tts_engine.runAndWait()
-        # print(utterance)
+        print(utterance)
         # waiting here might break everything
         brick2.Sound.speak(utterance).wait()
+        sleep(3)
 
     def get_spoken_utterance(self):
         self.record_phrase(fname=self.phrase_file_name)
@@ -63,18 +65,17 @@ class Speech():
         #     lm='words.lm',
         #     kws='pour_it.list'
         # )
-
         speech = AudioFile(
-            audio_file=self.phrase_file_name,
+            audio_file=self.path_prefix + self.phrase_file_name,
             verbose=False,
             # sampling_rate=16000,
             buffer_size=2048,
             no_search=False,
             full_utt=False,
             hmm=self.sphinx_model_path,
-            dic='words.dic',
-            lm='words.lm',
-            kws='words.list'
+            dic=self.path_prefix + 'words.dic',
+            lm=self.path_prefix + 'words.lm',
+            kws=self.path_prefix + 'words.list'
         )
         words = set()
         for phrase in speech:

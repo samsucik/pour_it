@@ -21,7 +21,7 @@ class Camera():
         self.running_on_dice = os.getcwd().startswith('/afs/inf.ed.ac.uk')
         self.using_picamera = self.running_on_pi
         
-        self.cam_fps = 10.0
+        self.cam_fps = 20.0
         self.custom_shapes_names = ['triangle', 'heart', 'circle', 'star'] #, 'square', 'cross']
         self.custom_shapes_contours = dict()
         self.custom_shape_sim_threshold = 0.08
@@ -271,11 +271,15 @@ class Camera():
 
     # Blurs and binarises passed image.
     def apply_filters(self, image):
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        image = cv2.GaussianBlur(image, (5, 5), 0)
-        (thresh, image) = cv2.threshold(image, 60, 255, cv2.THRESH_BINARY_INV)
+        if image is None:
+            print("No image provided!")
+            return None
+        else:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            image = cv2.GaussianBlur(image, (5, 5), 0)
+            (thresh, image) = cv2.threshold(image, 60, 255, cv2.THRESH_BINARY_INV)
 
-        return image
+            return image
 
 
     # Detects all contours in the given image.
@@ -373,7 +377,6 @@ class Camera():
         return shapes_seen_consistently
 
 
-
     # Displays simple live stream coming from the camera (only on non-Pi devices)
     def stream_from_camera(self):
         if self.using_picamera or self.running_on_pi:
@@ -390,7 +393,7 @@ class Camera():
     # Processes the camera stream, looking for the specified shape. Can be restricted
     # to only run for a maximum of timeToRun seconds and then return None if the desired
     # shape was not detected.
-    def stream_and_detect(self, wantedShape, showStream=False, continuousStream=False, timeToRun=1.0, multiThread=False):
+    def stream_and_detect(self, wantedShape, showStream=False, continuousStream=False, timeToRun=1.0, saveImages=False, fname="img", multiThread=False):
         start = time.time()
         runAgain = True
         x_coordinate = None
@@ -420,6 +423,10 @@ class Camera():
                     x_coordinate = self.get_x_position_of_contour(best_contour)
                     height = self.get_contour_height(best_contour)
                     print("Height of best contour: {}px".format(self.get_contour_height(best_contour)))
+                    
+                    if saveImages:
+                        img = self.draw_contour(img, best_contour, wantedShape)
+                        cv2.imwrite(fname + ".jpg", img)
 
 
                 if showStream:
@@ -495,6 +502,15 @@ class Camera():
 
         return shape
 
+    def contour_detection_demo(self, fname="img"):
+        sleep(1)
+        img = self.get_fresh_image_from_camera()
+        img = self.apply_filters(img)
+        contours, _ = self.get_contours(img)
+        for contour in contours:
+            img = self.draw_contour(img, contour)
+        cv2.imwrite(fname + ".jpg", img)
+
 
     # Simple showcase of what this class can do.
     def demo(self):
@@ -507,7 +523,8 @@ class Camera():
             self.stream_from_camera()
 
         for i in range(1000):
-            x, _ = self.stream_and_detect(wantedShape=shape, showStream=False, continuousStream=False, multiThread=False)
+            fname = "img" + str(i)
+            x, _ = self.stream_and_detect(wantedShape=shape, showStream=False, continuousStream=False, saveImages=True, fname=fname)
             
             if x:
                 print("Position of {}: {}px.".format(shape, x))
@@ -521,6 +538,8 @@ if __name__ == "__main__":
     # cam.load_custom_shapes()
 
     # cam.get_desired_shape()
+    # for i in range(10):
+    #     cam.contour_detection_demo(str(i))
 
     cam.demo()
 

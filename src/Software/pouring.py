@@ -15,7 +15,7 @@ class Pouring:
         self.pourer.run_forever(speed_sp=-50)
 
     def timedLift(self, time):
-        self.pourer.run_timed(speed=-50,time_sp=time)
+        self.pourer.run_timed(speed_sp=-50,time_sp=time)
 
     def stopPourer(self):
         print("STOP Pourer")

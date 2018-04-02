@@ -16,7 +16,8 @@ class turn_to_bottle:
         self.leftM.run_direct()
         self.rightM.run_direct()
         self.ultrasonic = brick2.UltrasonicSensor()
-        self.camera_aspect_width = 160
+        self.camera_aspect_width = 600
+        self.height_threshold = 40
         self.base_speed = 0
         self.turn_speed_boost = 55
         self.leftm = []
@@ -88,11 +89,11 @@ class turn_to_bottle:
         self.rightM.run_timed(time_sp=time_to_run, speed_sp=int(speed_rightM ))
         self.leftM.run_timed(time_sp=time_to_run, speed_sp=int(speed_leftM ))
 
-    def adjust_angle(self, cam, shape, tol=[80], time_to_run=200):
+    def adjust_angle(self, cam, shape, tol=[300], time_to_run=200):
         # change to finite loop
         while True:
             x, height = cam.stream_and_detect(wantedShape=shape, showStream=False, continuousStream=False, timeToRun=1.0, multiThread=False)
-            if x is not None and height > 10:
+            if x is not None and height > self.height_threshold:
                 self.turn_once(x, time_to_run)
             print("X: " + str(x))
 
