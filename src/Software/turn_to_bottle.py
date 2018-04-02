@@ -1,7 +1,7 @@
 # !/usr/bin/env python3
 import rpyc
-conn = rpyc.classic.connect('ev3dev') #host name or IP address of EV3
-ev3 = conn.modules['ev3dev.ev3'] #import ev3dev.ev3
+conn = rpyc.classic.connect('ev3dev2.local') #host name or IP address of EV3
+brick2 = conn.modules['ev3dev.ev3'] #import ev3dev.ev3
 ev3proxy = conn.modules['ev3_proxy']
 from time import time, sleep
 import math
@@ -9,14 +9,15 @@ import math
 class turn_to_bottle:
 
     def __init__(self):
-        self.leftM = ev3.LargeMotor('outC')
-        self.rightM = ev3.LargeMotor('outD')
-        self.cline = ev3.ColorSensor()
+        self.leftM = brick2.LargeMotor('outC')
+        self.rightM = brick2.LargeMotor('outD')
+        self.cline = brick2.ColorSensor('in2')
         self.cline.mode = 'COL-REFLECT'
         self.leftM.run_direct()
         self.rightM.run_direct()
-        self.ultrasonic = ev3.UltrasonicSensor()
-        self.camera_aspect_width = 160
+        self.ultrasonic = brick2.UltrasonicSensor()
+        self.camera_aspect_width = 600
+        self.height_threshold = 40
         self.base_speed = 0
         self.turn_speed_boost = 55
         self.leftm = []
@@ -88,11 +89,11 @@ class turn_to_bottle:
         self.rightM.run_timed(time_sp=time_to_run, speed_sp=int(speed_rightM ))
         self.leftM.run_timed(time_sp=time_to_run, speed_sp=int(speed_leftM ))
 
-    def adjust_angle(self, cam, shape, tol=[80], time_to_run=200):
+    def adjust_angle(self, cam, shape, tol=[300], time_to_run=200):
         # change to finite loop
         while True:
             x, height = cam.stream_and_detect(wantedShape=shape, showStream=False, continuousStream=False, timeToRun=1.0, multiThread=False)
-            if x is not None and height > 10:
+            if x is not None and height > self.height_threshold:
                 self.turn_once(x, time_to_run)
             print("X: " + str(x))
 

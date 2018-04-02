@@ -7,35 +7,34 @@ from pocketsphinx import AudioFile
 import speech_recognition as sr
 
 # remote python setup
-# import rpyc
-# conn = rpyc.classic.connect('ev3dev')
-# ev3 = conn.modules['ev3dev.ev3']
+import rpyc
+conn2 = rpyc.classic.connect('ev3dev2.local')
+brick2 = conn2.modules['ev3dev.ev3']
 
 class Speech():
     def __init__(self):
         # self.setup_tts()
         self.set_up_speech_recogniser()
-
+        self.phrase_file_name = "phrase.raw"
+        print(os.getcwd())
+        self.path_prefix = '' if os.getcwd().endswith('speech') else 'speech/'
         self.sphinx_model_path = os.path.join(get_model_path(), 'en-us')
         print(self.sphinx_model_path)
 
         self.drink_options = set({"WATER", "MEDICINE", "LEMONADE"})
         self.yes_no_options = set({"OK", "NO"})
 
-
     def set_up_speech_recogniser(self):
         self.recognizer = sr.Recognizer()
-        with sr.Microphone(device_index=0, sample_rate=16000) as source:
-            self.recognizer.adjust_for_ambient_noise(source)
+        self.recognizer.dynamic_energy_threshold = False
+        self.recognizer.energy_threshold = 600
 
-
-    def record_phrase(self):
+    def record_phrase(self, fname="phrase.raw"):
         with sr.Microphone(device_index=0, sample_rate=16000) as source:
             audio = self.recognizer.listen(source)
-            with open("phrase.raw", "wb") as f:
+            with open(self.path_prefix + "phrase.raw", "wb") as f:
                 f.write(audio.get_raw_data())
         print("...")
-
 
     # def setup_tts(self):
     #     self.tts_engine = pyttsx.init()
@@ -43,17 +42,17 @@ class Speech():
     #     self.tts_engine.setProperty('rate', rate-50)
     #     self.tts_engine.setProperty('voice', 'english')
 
-
     def say(self, utterance):
         # l = len(utterance)
         # self.tts_engine.say(utterance)
         # self.tts_engine.runAndWait()
         print(utterance)
-        # ev3.Sound.speak(utterance)
-
+        # waiting here might break everything
+        brick2.Sound.speak(utterance).wait()
+        sleep(3)
 
     def get_spoken_utterance(self):
-        self.record_phrase()
+        self.record_phrase(fname=self.phrase_file_name)
         # speech = LiveSpeech(
         #     # audio_device='hw:0',
         #     verbose=False,
@@ -66,22 +65,24 @@ class Speech():
         #     lm='words.lm',
         #     kws='pour_it.list'
         # )
-
         speech = AudioFile(
-            audio_file="phrase.raw",
+            audio_file=self.path_prefix + self.phrase_file_name,
             verbose=False,
             # sampling_rate=16000,
             buffer_size=2048,
             no_search=False,
             full_utt=False,
             hmm=self.sphinx_model_path,
-            dic='words.dic',
-            lm='words.lm',
-            kws='words.list'
+            dic=self.path_prefix + 'words.dic',
+            lm=self.path_prefix + 'words.lm',
+            kws=self.path_prefix + 'words.list'
         )
         words = set()
         for phrase in speech:
-            # print("{} ({})".format(phrase, phrase.probability()))
+            with open("stats.txt", "a+") as f:
+                f.write("\n" + str(phrase.segments(detailed=True)))
+                print(phrase.segments(detailed=True))
+            print("{} ({})".format(phrase, phrase.probability()))
             for word in str(phrase).split(' '):
                 words.add(word.strip())
         if len(words) > 0:
@@ -89,21 +90,21 @@ class Speech():
 
         return words
 
-
-    def choose_one_from_list(self, words, options):
+    def choose_one_from_list(self, words, options, allow_multiple=False):
         detected_options = set()
         for word in words:
             if word in options:
                 detected_options.add(word)
-        if len(detected_options) == 0 or len(detected_options) > 1:
+        
+        if len(detected_options) == 0:
             return None
-        else:
+        elif len(detected_options) == 1 or allow_multiple:
             return list(detected_options)[0]
-
+        else:
+            return None
 
     def greet_user(self):
         print("\nHello, dear friend! I am your intelligent assistant YARR.\n")
-
 
     def get_drink_option(self):
         utterance = None
@@ -117,7 +118,6 @@ class Speech():
                     self.say("You want {}, correct?".format(drink_option))
                     utterance = self.get_spoken_utterance()
                     yes_no_option = self.choose_one_from_list(utterance, self.yes_no_options)
-                    yes_no_option
                     if yes_no_option == "OK":
                         self.say("Perfect, I will give you some {}.".format(drink_option))
                         return drink_option
@@ -129,9 +129,9 @@ class Speech():
             else:
                 self.say("Sorry, which drink do you want?")
 
-
-speech = Speech()
-speech.greet_user()
-while True:
-    drink_option = speech.get_drink_option()
-# print("\nUSER WANTS: {}".format(drink_option))
+if __name__ == '__main__':
+    speech = Speech()
+    speech.greet_user()
+    while True:
+        drink_option = speech.get_drink_option()
+    # print("\nUSER WANTS: {}".format(drink_option))
