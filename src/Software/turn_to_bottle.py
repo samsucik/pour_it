@@ -94,6 +94,7 @@ class turn_to_bottle:
         while True:
             x, height = cam.stream_and_detect(wantedShape=shape, showStream=False, continuousStream=False, timeToRun=1.0, multiThread=False)
             if x is not None and height > self.height_threshold:
+
                 self.turn_once(x, time_to_run)
             print("X: " + str(x))
 

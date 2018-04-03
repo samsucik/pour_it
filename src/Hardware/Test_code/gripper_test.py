@@ -1,8 +1,8 @@
 #remote python call setup
-#import ev3dev.ev3 as ev3
-import rpyc
-conn = rpyc.classic.connect('ev3dev') #host name or IP address of EV3
-ev3 = conn.modules['ev3dev.ev3'] #import ev3dev.ev3
+import ev3dev.ev3 as ev3
+#import rpyc
+#conn = rpyc.classic.connect('ev3dev') #host name or IP address of EV3
+#ev3 = conn.modules['ev3dev.ev3'] #import ev3dev.ev3
 import time
 from time import sleep
 
