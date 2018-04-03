@@ -296,20 +296,22 @@ class Camera():
 
     # Finds the most salient contour or possibly the most salient exemplar
     # of a desired shape in the image.
-    def find_most_salient_contour(self, contours, wantedShape=None):
+    def find_most_salient_contour(self, contours, wantedShape=None, minHeight=None):
         # Loop through found contours and try detecting those 
         # that resemble custom shapes or polygons.
         max_weight = -10000
         best_contour = None
         label_to_return = None
 
-        for c in contours:         
+        for contour in contours:
+            if minHeight is not None and self.get_contour_height(contour) < minHeight:
+                continue
             # Detect and remember all detected shapes
-            weight, label = self.detect_custom_shape(c)            
+            weight, label = self.detect_custom_shape(contour)
 
             if weight > max_weight and (wantedShape is None or label == wantedShape):
                 max_weight = weight
-                best_contour = c
+                best_contour = contour
                 label_to_return = label
 
         return best_contour, label_to_return
@@ -325,7 +327,7 @@ class Camera():
 
     # Height of given contour in pixels
     def get_contour_height(self, contour):
-        x, y, w, h = cv2.boundingRect(contour)
+        _, _, _, h = cv2.boundingRect(contour)
         return h
 
 
@@ -390,10 +392,36 @@ class Camera():
                     break    
 
 
-    # Processes the camera stream, looking for the specified shape. Can be restricted
-    # to only run for a maximum of timeToRun seconds and then return None if the desired
-    # shape was not detected.
-    def stream_and_detect(self, wantedShape, showStream=False, continuousStream=False, timeToRun=1.0, saveImages=False, fname="img", multiThread=False):
+    def stream_and_detect(self, wantedShape, minShapeHeight=None, showStream=False, 
+        continuousStream=False, timeToRun=1.0, saveImages=False, fname="img", multiThread=False):
+        """
+        Processes the camera stream, looking for the specified shape. Can be restricted
+        to only run for a maximum of timeToRun seconds and then return None if the desired
+        shape was not detected.
+                
+        Arguments:
+            wantedShape {string} -- the shape we want to detect
+        
+        Keyword Arguments:
+            minShapeHeight {number} -- minimum height of a shape contour to be considered
+                (to filter out majority of small fake shapes detected in the noise)
+            showStream {bool} -- whether to show the live stream from the camera 
+                (can't be used on RPi)
+            continuousStream {bool} -- run forever instead of returning when the desired 
+                shape is detected
+            timeToRun {number} -- the maximum time the function can take before it forcibly
+                returns (useful to make sure we don't wait for ages for a shape that is 
+                simply not found in our field of vision)
+            saveImages {bool} -- whether to save the frames as we go (for debugging 
+                the field of vision settings of the camera)
+            fname {str} -- prefix to use when saving frames to files (relevant when saveImages
+                is True)
+            multiThread {bool} -- whether to do multithreading (used with the Logitech camera
+                for fetching fresh images rather than stale material from the buffer)
+        
+        Returns:
+            int or None -- the X coordinate (in pixels) of the best found instance of the wanted shape
+        """
         start = time.time()
         runAgain = True
         x_coordinate = None
@@ -417,7 +445,7 @@ class Camera():
             # We managed to get an image; continue and process the contours present in it
             if img is not None:
                 contours, img = self.get_contours(img)
-                best_contour, _ = self.find_most_salient_contour(contours, wantedShape)
+                best_contour, _ = self.find_most_salient_contour(contours, wantedShape, minHeight=minShapeHeight)
                 
                 if best_contour is not None:
                     x_coordinate = self.get_x_position_of_contour(best_contour)
@@ -501,6 +529,7 @@ class Camera():
             print(shape)
 
         return shape
+
 
     def contour_detection_demo(self, fname="img"):
         sleep(1)
