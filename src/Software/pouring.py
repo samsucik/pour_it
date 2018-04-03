@@ -9,6 +9,7 @@ class Pouring:
 
     def __init__(self):
         self.pourer = brick2.LargeMotor('outB')
+        self.gripper = brick2.MediumMotor('outA')
         self.touchSensor = brick2.TouchSensor()
 
     def startPouring(self):
@@ -30,20 +31,26 @@ class Pouring:
                 break
 
     def liftPourer(self):
-        self.pourer.run_timed(time_sp=11000, speed_sp=-50)
+        self.pourer.run_timed(time_sp=11000, speed_sp=-50, stop_action="hold")
 
     def pour_it(self):
-        self.pourer.run_timed(time_sp=5000, speed_sp=-70)
-        sleep(7)
-        self.pourer.run_timed(time_sp=5000, speed_sp=70)
+        self.pourer.run_timed(time_sp=7000, speed_sp=-70)
+        sleep(9)
+        self.pourer.run_timed(time_sp=7000, speed_sp=70)
 
 if __name__ == '__main__':
     p = Pouring()
-    #print("lift pourer")
-    #p.liftPourer()
-    #sleep(13)
-    #print("pouring")
-    #p.pour_it()
-    #sleep(14)
+    p.gripper.run_forever(speed_sp=-200)
+    sleep(1)
+    p.gripper.run_forever(speed_sp=200)
+    sleep(1)
+    print("lift pourer")
+    p.liftPourer()
+    sleep(13)
+    print("pouring")
+    p.pour_it()
+    sleep(12)
     print("return to initial position")
     p.stopPourer()
+    sleep(5)
+    p.gripper.stop()

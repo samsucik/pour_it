@@ -30,6 +30,7 @@ class Speech():
         self.recognizer.energy_threshold = 600
 
     def record_phrase(self, fname="phrase.raw"):
+        wait_return = brick2.Sound.beep().wait()
         with sr.Microphone(device_index=0, sample_rate=16000) as source:
             audio = self.recognizer.listen(source)
             with open(self.path_prefix + "phrase.raw", "wb") as f:
@@ -42,14 +43,15 @@ class Speech():
     #     self.tts_engine.setProperty('rate', rate-50)
     #     self.tts_engine.setProperty('voice', 'english')
 
-    def say(self, utterance):
-        # l = len(utterance)
+    def say(self,utterance,sleep_speech=False):
+        l = len(utterance)
         # self.tts_engine.say(utterance)
         # self.tts_engine.runAndWait()
-        print(utterance)
         # waiting here might break everything
-        brick2.Sound.speak(utterance).wait()
-        sleep(3)
+        wait_return = brick2.Sound.speak(utterance).wait()
+        print(utterance)
+        if sleep_speech:
+            sleep(2.5)
 
     def get_spoken_utterance(self):
         self.record_phrase(fname=self.phrase_file_name)
@@ -109,25 +111,25 @@ class Speech():
     def get_drink_option(self):
         utterance = None
         while True:
-            self.say("What would you like to drink?")
+            self.say("What would you like to drink?",sleep_speech=True)
             utterance = self.get_spoken_utterance()
-            
+
             drink_option = self.choose_one_from_list(utterance, self.drink_options)
             if drink_option:
                 while True:
-                    self.say("You want {}, correct?".format(drink_option))
+                    self.say("You want {}, correct?".format(drink_option),sleep_speech=True)
                     utterance = self.get_spoken_utterance()
                     yes_no_option = self.choose_one_from_list(utterance, self.yes_no_options)
                     if yes_no_option == "OK":
-                        self.say("Perfect, I will give you some {}.".format(drink_option))
+                        self.say("Perfect, I will give you some {}.".format(drink_option),sleep_speech=True)
                         return drink_option
                     elif yes_no_option == "NO":
-                        self.say("Oh, I see.")
+                        self.say("Oh, I see.",sleep_speech=True)
                         break
                     else:
-                        self.say("Sorry, I didn't understand.")
+                        self.say("Sorry.",sleep_speech=True)
             else:
-                self.say("Sorry, which drink do you want?")
+                self.say("Sorry",sleep_speech=True)
 
 if __name__ == '__main__':
     speech = Speech()

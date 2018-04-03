@@ -40,11 +40,11 @@ cam = Camera()
 cam.load_custom_shapes()
 turn = turn_to_bottle()
 pourer = Pouring()
-speechRecog = Speech()
+speech = Speech()
 cam_centre = int(cam.cam_width/2)
 # global variables
-height_threshold = 40
-cam_offset = 15
+height_threshold = 35
+cam_offset = 12
 
 def openGripper():
     gripper.run_forever(speed_sp=-100)
@@ -91,20 +91,20 @@ def openBottle():
     sleep(5)
 
 ########## code segment #########
-#brick2.Sound.speak("Hello and welcome to the demo")
+#speech.say("Hello and welcome to the demo")
 
 #sleep(3)
 
 # receive shape from user
-#brick2.Sound.speak("please present card").wait()
+#speech.say("please present card").wait()
 
 # make sure gripper is open before searching for a bottle
 openGripper()
 sleep(2)
-#gripper.stop()
+gripper.stop()
 
 # make sure wheels are stopped
-#ev3proxy.motors_stop()
+ev3proxy.motors_stop()
 
 # gets shape from the user
 # TODO: change to speech class method
@@ -112,20 +112,22 @@ sleep(2)
 
 # using speech class to get users selection of drink
 
-#drink_option = speechRecog.get_drink_option()
+#drink_option = speech.get_drink_option()
+drink_option = "WATER"
 
 # TODO: drinks option to shape
 drink_to_shape = {'WATER': 'heart', 'MEDICINE': 'triangle', 'LEMONADE': 'circle'}
-shape = 'heart'
-
+shape =  'heart'
 #drink_to_shape[drink_option]
 
 print(shape)
-brick2.Sound.speak("Your shape was " + shape)
+speech.say("Now searching for bottle with shape " + shape)
 sleep(2)
 
 # lift gripper out of the way of camera
-pourer.timedLift(2000)
+pourer.timedLift(4000)
+speech.say("raising bottle")
+sleep(4)
 
 # start pid to move robot pass camera so pid can check for shape as it travels
 pid = run.Popen(["python3", "XNO_pid_slow.py"])
@@ -136,61 +138,58 @@ i = 0
 while x is None:
     x, height = cam.stream_and_detect(wantedShape=shape, showStream=False, multiThread=False)
     print("shape detected: " + str(x))
-    if ((x is not None) and i < 2 ):
-        i += 1
-        x = None
     # changes thresh holds for bottle approach and bottle align
     if (height is not None )and height < height_threshold:
         x = None
-    if atStartSensor.value() == 5:
-        brick2.Sound.speak("Your bottle has not been found").wait()
-        brick2.Sound.speak("Robot has finished")
-        sys.exit(0)
+    if atStartSensor.value() == 2:
+        speech.say("Sorry, I haven't found your bottle.")
 
 # kill PID process on brick when camera finds bottle stop motors all they will still run
 pid.kill()
 ev3proxy.motors_stop()
 
 # turns robot to bottle
-print("adjusting angle of robot to face bottle")
+print("Adjusting angle of robot to face bottle.")
+speech.say("I am readjusting my position to face the bottle of {}.".format(drink_option))
 turn.adjust_angle(cam, shape, tol=range(cam_centre-cam_offset,cam_centre+cam_offset), time_to_run=100)
 
-brick2.Sound.speak("aligned with bottle")
+speech.say("I am now facing the bottle.")
 sleep(4)
 
 # move towards bottle
 approach_bottle(shape)
-brick2.Sound.speak("bottle approached")
+speech.say("I have approached the bottle.")
 
 # initialise slow approach after alignment
-turn.adjust_angle(cam, shape, tol=range(cam_centre-cam_offset,cam_centre+cam_offset))
+turn.adjust_angle(cam, shape, tol=range(cam_centre-6,cam_centre+6))
 
+sleep(1)
 # open gripper
 openGripper()
 
 # return gripper to lowest point
 pourer.stopPourer()
+print("lowering gripper")
+sleep(3)
 
-sleep(5)
-
-brick2.Sound.speak("lowering gripper")
-
+speech.say("I am now coming closer to the bottle.")
 # slow approach code
 slow_approach()
 
 # grip bottle
 closeGripper()
+speech.say("I am holding the bottle of {} and will bring it to you shortly.".format(drink_option))
 
 # wait until bottle is gripped before lifting
 sleep(2)
-brick2.Sound.speak("lifting bottle")
+print("lifting bottle")
 
 # lift bottle out of the way of ultra sonic sensor
 pourer.liftPourer()
 
 sleep(13)
 
-brick2.Sound.speak("moving back to line")
+speech.say("I will now return with the bottle to the black line.")
 
 # go back to line
 turn.goBack2Phase(motors_power=80)
@@ -198,6 +197,8 @@ ev3proxy.motors_stop()
 
 # run pid to go around loop, using fast pid
 pid = run.Popen(["python3", "XNO_pid.py"])
+
+speech.say("I am now back to the black line coming back to pour the {} for you.".format(drink_option))
 
 # wait until pid returns us to the start
 # indicated by the blue tape marker
@@ -209,10 +210,14 @@ ev3proxy.motors_stop()
 pid.kill()
 ev3proxy.motors_stop()
 
+speech.say("Now I will open the bottle.")
+
 # extend opener arm to remove the bottle gap then
 openBottle()
+speech.say("I have opened the bottle. Now I will pour you some {}.".format(drink_option))
+sleep(3)
 
-brick2.Sound.speak("pouring")
+print("pouring")
 
 # when back at pouring area initialise pouring
 pourer.pour_it()
@@ -220,7 +225,7 @@ pourer.pour_it()
 # wait for pouring to complete
 sleep(11)
 
-brick2.Sound.speak("returning to start")
+speech.say("I have poured you a glass of {}. Enjoy!".format(drink_option))
 
 # restart fast pid to return to starting position
 pid = run.Popen(["python3", "XNO_pid.py"])
@@ -235,7 +240,7 @@ ev3proxy.motors_stop()
 pid.kill()
 ev3proxy.motors_stop()
 
-brick2.Sound.speak("returned to start and lowering bottle")
+speech.say("I am back to my starting position.")
 
 # return pouring platform
 pourer.stopPourer()
@@ -246,10 +251,10 @@ sleep(2)
 openGripper()
 gripper.stop()
 
-brick2.Sound.speak("bottle returned")
+print("bottle returned")
 sleep(1)
 
-brick2.Sound.speak("I'm finished. UGHHHHHHH").wait()
+speech.say("It was my pleasure to serve you. I am YARR - Your Assistive Rehydration Robot. Thank you for using me")
 
 # clean up code
 cam.destroy_camera()

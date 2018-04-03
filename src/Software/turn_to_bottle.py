@@ -17,7 +17,7 @@ class turn_to_bottle:
         self.rightM.run_direct()
         self.ultrasonic = brick2.UltrasonicSensor()
         self.camera_aspect_width = 600
-        self.height_threshold = 40
+        self.height_threshold = 35
         self.base_speed = 0
         self.turn_speed_boost = 55
         self.leftm = []
