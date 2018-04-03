@@ -17,6 +17,9 @@ class Pouring:
     def timedLift(self, time):
         self.pourer.run_timed(speed_sp=-50,time_sp=time)
 
+    def timedDescent(self,speed,time):
+        self.pourer.run_timed(speed_sp=speed,time_sp=time)
+
     def stopPourer(self):
         print("STOP Pourer")
         self.pourer.run_forever(speed_sp=50)
@@ -36,11 +39,11 @@ class Pouring:
 
 if __name__ == '__main__':
     p = Pouring()
-    print("lift pourer")
-    p.liftPourer()
-    sleep(13)
-    print("pouring")
-    p.pour_it()
-    sleep(14)
+    #print("lift pourer")
+    #p.liftPourer()
+    #sleep(13)
+    #print("pouring")
+    #p.pour_it()
+    #sleep(14)
     print("return to initial position")
     p.stopPourer()

@@ -41,7 +41,7 @@ cam.load_custom_shapes()
 turn = turn_to_bottle()
 pourer = Pouring()
 speechRecog = Speech()
-
+cam_centre = int(cam.cam_width/2)
 # global variables
 height_threshold = 40
 cam_offset = 15
@@ -67,7 +67,7 @@ def approach_bottle(shape):
             if x < cam.cam_width - cam_offset or x > cam.cam_width + cam_offset:
                 print("re-aligning to bottle")
                 ev3proxy.motors_stop()
-                turn.adjust_angle(cam, shape)
+                turn.adjust_angle(cam, shape,tol=range(cam_centre-cam_offset,cam_centre+cam_offset))
                 # leftM.run_timed(speed_sp=100, time_sp=200)
                 sleep(1)
                 ev3proxy.motors_run(speed=100)
@@ -81,12 +81,14 @@ def slow_approach():
 
 def openBottle():
     opener.run_timed(speed_sp=800, time_sp=(20000+12000))
-    arm.run_timed(speed_sp=400, time_sp=20000)
+    arm.run_timed(speed_sp=-400, time_sp=20000)
     sleep(20+12)
-    pourer.run_timed(speed_sp=50, time_sp=5000)
+    pourer.timedDescent(speed=50,time=5000)
     sleep(5)
-    arm.run_timed(speed_sp=-600, time_sp=13400)
+    arm.run_timed(speed_sp=600, time_sp=13400)
     sleep(13.4)
+    pourer.timedLift(time=5000)
+    sleep(5)
 
 ########## code segment #########
 #brick2.Sound.speak("Hello and welcome to the demo")
@@ -97,8 +99,8 @@ def openBottle():
 #brick2.Sound.speak("please present card").wait()
 
 # make sure gripper is open before searching for a bottle
-#openGripper()
-#sleep(2)
+openGripper()
+sleep(2)
 #gripper.stop()
 
 # make sure wheels are stopped
@@ -109,11 +111,14 @@ def openBottle():
 # shape = cam.get_desired_shape()
 
 # using speech class to get users selection of drink
-drink_option = speechRecog.get_drink_option()
+
+#drink_option = speechRecog.get_drink_option()
 
 # TODO: drinks option to shape
 drink_to_shape = {'WATER': 'heart', 'MEDICINE': 'triangle', 'LEMONADE': 'circle'}
-shape = drink_to_shape[drink_option]
+shape = 'heart'
+
+#drink_to_shape[drink_option]
 
 print(shape)
 brick2.Sound.speak("Your shape was " + shape)
@@ -148,7 +153,7 @@ ev3proxy.motors_stop()
 
 # turns robot to bottle
 print("adjusting angle of robot to face bottle")
-turn.adjust_angle(cam, shape)
+turn.adjust_angle(cam, shape, tol=range(cam_centre-cam_offset,cam_centre+cam_offset), time_to_run=100)
 
 brick2.Sound.speak("aligned with bottle")
 sleep(4)
@@ -158,13 +163,17 @@ approach_bottle(shape)
 brick2.Sound.speak("bottle approached")
 
 # initialise slow approach after alignment
-turn.adjust_angle(cam, shape, tol=range(cam.cam_width-cam_offset,cam.cam_width+cam_offset), time_to_run=100)
+turn.adjust_angle(cam, shape, tol=range(cam_centre-cam_offset,cam_centre+cam_offset))
 
 # open gripper
 openGripper()
 
 # return gripper to lowest point
 pourer.stopPourer()
+
+sleep(5)
+
+brick2.Sound.speak("lowering gripper")
 
 # slow approach code
 slow_approach()
@@ -173,7 +182,7 @@ slow_approach()
 closeGripper()
 
 # wait until bottle is gripped before lifting
-sleep(1)
+sleep(2)
 brick2.Sound.speak("lifting bottle")
 
 # lift bottle out of the way of ultra sonic sensor
@@ -204,6 +213,7 @@ ev3proxy.motors_stop()
 openBottle()
 
 brick2.Sound.speak("pouring")
+
 # when back at pouring area initialise pouring
 pourer.pour_it()
 
@@ -216,7 +226,7 @@ brick2.Sound.speak("returning to start")
 pid = run.Popen(["python3", "XNO_pid.py"])
 
 # value of 5 equals red
-# wait until red marker is seen 
+# wait until red marker is seen
 while not(atStartSensor.value() == 5):
     pass
 
