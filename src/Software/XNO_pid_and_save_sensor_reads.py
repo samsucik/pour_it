@@ -1,7 +1,6 @@
 # !/usr/bin/env python3
 from time import time, sleep
 import ev3dev.ev3 as ev3
-from PID_NN import PID_NN
 #import rpyc
 #conn = rpyc.classic.connect('ev3dev') #host name or IP address of EV3
 #ev3 = conn.modules['ev3dev.ev3'] #import ev3dev.ev3
@@ -24,7 +23,7 @@ class PID:
         self.uhead = ev3.UltrasonicSensor()
 
         # Controls the base power to each one of the large motors.
-        self.power = 60
+        self.power = 50
 
         # Minimum and maximum reflected light intensity values.
         self.minRef = 10
@@ -49,102 +48,6 @@ class PID:
 
         # Variable used for detecting a button press ()
         self.btn = ev3.Button()
-
-        self.weights_path = 'weights.txt'
-        self.sensor_reads_path = 'sensor_inputs.txt'
-        self.backup_path = 'backup.txt'
-        self.pid_nn = PID_NN(0.01,self.target/float(100),self.weights_path,self.sensor_reads_path,self.backup_path)
-
-        self.weights = self.pid_nn.read_weights()
-
-    def train_NN(self,epochs=20):
-        for i in range(1,epochs+1):
-            self.pid_nn = PID_NN(0.01,self.target/float(100),self.weights_path,self.sensor_reads_path,self.backup_path)
-            self.weights = self.pid_nn.weights
-            val = self.run_NN_PID_train(i)
-            if(val):
-                self.pid_nn.train_model()
-                print('Epochs complete: ' + str(i))
-        print('Training complete.')
-    
-    def squash_output(self,value):
-        if(value < -1):
-            return -1
-        elif(value > 1):
-            return 1
-        else:
-            return value
-
-    # The robot runs until a button is pressed. 
-    # Then, the reads are saved in "sensor_inputs.txt".
-    def run_NN_PID_train(self,epoch):
-        # self.prev_row[0] = previous I neuron input;
-        # self.prev_row[1] = previous D neuron input;
-        self.prev_row = [0,0]
-        reads = []
-
-        self.rightM.run_direct()
-        self.leftM.run_direct()
-
-        target = self.target/float(100)
-        
-        while(not self.btn.any()):
-            refRead = self.cline.value()
-
-            # Normalized read.
-            normRead = (refRead - self.minRef) / (self.maxRef - self.minRef)
-            
-            reads.append(normRead)
-
-            initial_input = self.squash_output(target - normRead)
-
-            # Calculate course using the weights:
-            P_input = self.weights[11] * initial_input
-            P_output = self.squash_output(P_input)
-            
-            I_input = self.weights[12] * initial_input
-            I_output = 0
-            if(-1 <= I_input and I_input <= 1):
-                I_output = I_input + self.prev_row[0]
-            else:
-                I_output = self.squash_output(I_input)
-            self.prev_row[0] = I_input
-
-            D_input = self.weights[13] * initial_input
-            D_output = 0
-            if(-1 <= D_input and D_input <= 1):
-                D_output = D_input - self.prev_row[1]
-            else:
-                D_output = self.squash_output(D_input)
-            self.prev_row[1] = D_input
-
-            course = self.squash_output(self.weights[1] * P_output + self.weights[2] * I_output + self.weights[3] * D_output) * self.direction
-
-            # Calculate the power each motor should be given and pass it to them.
-            for (motor, pow) in zip((self.leftM, self.rightM), self.steering2(course, self.power)):
-                motor.duty_cycle_sp = pow
-            sleep(0.01)  # Approx 100Hz
-        
-        self.leftM.stop()
-        self.rightM.stop()
-
-        f = open(self.sensor_reads_path,'w')
-        g = open('new_reads_NN.txt','a')
-        g.write('Epoch: ' + str(epoch) + '\n')
-        prev = 0
-        for value in reads:
-            f.write(str(value) + '\n')
-            g.write(str(value) + '\n')
-        f.close()
-        g.close()
-
-        return True
-            
-        
-
-
-
-
 
 
     # course = determines how hard and in which direction the robot should turn in order to keep following the line.
@@ -203,19 +106,24 @@ class PID:
         self.mode_PID['runUntilStart'] = self.runUntilStartCondition
         self.mode_PID['runForever'] = self.runForeverCondition
 
+    # mode and params:
+    # 'timed' -> args[0] = time() + amount of time you want it to run for.
 
     def generalPIDRun(self, *args, **kwargs):
 
         self.createPIDmodes()
-
+        reads = []
         lastError = error = integral = 0
 
         # This mode will allow us to change the speed of the motors immediately.
         self.leftM.run_direct()
         self.rightM.run_direct()
         returnVal = 0
-        while(not returnVal):
+        while(not self.btn.any()):
             refRead = self.cline.value()
+
+            normRead = (refRead - self.minRef) / (self.maxRef - self.minRef)
+            reads.append(normRead)
 
             # Calculate the current error and its derivative.
             error = self.target - (100 * (refRead - self.minRef) / (self.maxRef - self.minRef))
@@ -240,6 +148,13 @@ class PID:
 
         self.leftM.stop()
         self.rightM.stop()
+
+        g = open('new_reads_normal.txt','a')
+        g.write('Failsafe delimiter string ' + '\n')
+        prev = 0
+        for value in reads:
+            g.write(str(value) + '\n')
+        g.close()
 
         return returnVal
 
@@ -278,5 +193,6 @@ class PID:
 if __name__ == "__main__":
     PID_obj = PID()
      # args[0] = waiting_time, args[1] = min_dist, args[2] = leftM, args[3] = rightM
-    PID_obj.train_NN()
+    PID_obj.mode = "runForever"
+    PID_obj.generalPIDRun()
     # PID_obj.generalPIDRun(PID_obj.waiting_time,PID_obj.stop_dist_cm,PID_obj.leftM,PID_obj.rightM)
