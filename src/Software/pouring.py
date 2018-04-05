@@ -31,12 +31,12 @@ class Pouring:
                 break
 
     def liftPourer(self):
-        self.pourer.run_timed(time_sp=11000, speed_sp=-50, stop_action="hold")
+        self.pourer.run_timed(time_sp=11300, speed_sp=-50, stop_action="hold")
 
     def pour_it(self):
-        self.pourer.run_timed(time_sp=7000, speed_sp=-70)
+        self.pourer.run_timed(time_sp=9000, speed_sp=-70)
         sleep(9)
-        self.pourer.run_timed(time_sp=7000, speed_sp=70)
+        self.pourer.run_timed(time_sp=9000, speed_sp=70)
 
 if __name__ == '__main__':
     p = Pouring()

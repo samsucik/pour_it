@@ -43,8 +43,8 @@ pourer = Pouring()
 speech = Speech()
 cam_centre = int(cam.cam_width/2)
 # global variables
-height_threshold = 35
-cam_offset = 12
+height_threshold = 32
+cam_offset = 10
 
 def openGripper():
     gripper.run_forever(speed_sp=-100)
@@ -58,9 +58,9 @@ def approach_bottle(shape):
     # If within 10 centimeters stop
     # make more harsh on pi
     print ("In bottle approach")
-    while uhead.distance_centimeters > 12:
+    while uhead.distance_centimeters > 14:
         print("Still approaching")
-        x, _ = cam.stream_and_detect(wantedShape=shape, showStream=True, continuousStream=False, timeToRun=1)
+        x, _ = cam.stream_and_detect(wantedShape=shape, showStream=True, continuousStream=False, timeToRun=1,minShapeHeight=height_threshold)
         if x is not None:
             # re-adjust alignment if shape moves more than 5 centers either way
             print()
@@ -112,13 +112,12 @@ ev3proxy.motors_stop()
 
 # using speech class to get users selection of drink
 
-#drink_option = speech.get_drink_option()
-drink_option = "WATER"
+drink_option = speech.get_drink_option()
+#drink_option = "WATER"
 
 # TODO: drinks option to shape
-drink_to_shape = {'WATER': 'heart', 'MEDICINE': 'triangle', 'LEMONADE': 'circle'}
-shape =  'heart'
-#drink_to_shape[drink_option]
+drink_to_shape = {'WATER': 'heart', 'MEDICINE': 'triangle', 'CIDER': 'circle'}
+shape = drink_to_shape[drink_option]
 
 print(shape)
 speech.say("Now searching for bottle with shape " + shape)
@@ -126,7 +125,7 @@ sleep(2)
 
 # lift gripper out of the way of camera
 pourer.timedLift(4000)
-speech.say("raising bottle")
+print("raising bottle")
 sleep(4)
 
 # start pid to move robot pass camera so pid can check for shape as it travels
@@ -136,12 +135,15 @@ pid = run.Popen(["python3", "XNO_pid_slow.py"])
 x = None
 i = 0
 while x is None:
-    x, height = cam.stream_and_detect(wantedShape=shape, showStream=False, multiThread=False)
+    x, height = cam.stream_and_detect(wantedShape=shape, showStream=False, multiThread=False,minShapeHeight=height_threshold)
     print("shape detected: " + str(x))
     # changes thresh holds for bottle approach and bottle align
-    if (height is not None )and height < height_threshold:
+    if ((x is not None) and i < 2 ):
+        i += 1
         x = None
     if atStartSensor.value() == 2:
+        pid.kill()
+        ev3proxy.motors_stop()
         speech.say("Sorry, I haven't found your bottle.")
 
 # kill PID process on brick when camera finds bottle stop motors all they will still run
@@ -160,17 +162,19 @@ sleep(4)
 approach_bottle(shape)
 speech.say("I have approached the bottle.")
 
-# initialise slow approach after alignment
-turn.adjust_angle(cam, shape, tol=range(cam_centre-6,cam_centre+6))
-
 sleep(1)
-# open gripper
-openGripper()
+
+# initialise slow approach after alignment
+turn.adjust_angle(cam, shape, tol=range(cam_centre-4,cam_centre+4))
 
 # return gripper to lowest point
 pourer.stopPourer()
 print("lowering gripper")
 sleep(3)
+
+# open gripper
+openGripper()
+sleep(1)
 
 speech.say("I am now coming closer to the bottle.")
 # slow approach code

@@ -21,8 +21,8 @@ class Speech():
         self.sphinx_model_path = os.path.join(get_model_path(), 'en-us')
         print(self.sphinx_model_path)
 
-        self.drink_options = set({"WATER", "MEDICINE", "LEMONADE"})
-        self.yes_no_options = set({"OK", "NO"})
+        self.drink_options = set({"WATER", "MEDICINE", "CIDER"})
+        self.yes_no_options = set({"NO", "OK"})
 
     def set_up_speech_recogniser(self):
         self.recognizer = sr.Recognizer()
@@ -131,9 +131,25 @@ class Speech():
             else:
                 self.say("Sorry",sleep_speech=True)
 
+    def quick_run_speech(self):
+        while True:
+            options = list(self.yes_no_options) + list(self.drink_options)
+            for phrase in options:
+                print("Say {}".format(phrase))
+                utterance = self.get_spoken_utterance()
+                if phrase in self.yes_no_options:
+                    you_said = self.choose_one_from_list(utterance,self.yes_no_options)
+                    print("you said {}".format(you_said))
+                elif phrase in self.drink_options:
+                    you_said = self.choose_one_from_list(utterance,self.drink_options)
+                    print("you said {}".format(you_said))
+                with open("speech_test_data.txt","a+") as data:
+                    data.write("{}, {}\n".format(phrase,you_said))
+
 if __name__ == '__main__':
     speech = Speech()
     speech.greet_user()
-    while True:
-        drink_option = speech.get_drink_option()
+    #while True:
+    #    drink_option = speech.get_drink_option()
     # print("\nUSER WANTS: {}".format(drink_option))
+    speech.quick_run_speech()

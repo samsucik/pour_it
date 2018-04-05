@@ -24,7 +24,7 @@ class Camera():
         self.cam_fps = 20.0
         self.custom_shapes_names = ['triangle', 'heart', 'circle', 'star'] #, 'square', 'cross']
         self.custom_shapes_contours = dict()
-        self.custom_shape_sim_threshold = 0.08
+        self.custom_shape_sim_threshold = 0.07 # similarity threshold; smaller values are more strict
         
         if not self.using_picamera:
             self.set_logitech_variables()
@@ -68,13 +68,13 @@ class Camera():
     def setup_camera(self):
         if self.using_picamera:
             self.cam_width = 600
-            self.cam_height = 200
+            self.cam_height = 300
             self.camera = PiCamera()
             self.camera.color_effects = (128, 128) #B&w mode
             self.camera.contrast = 70
             self.camera.framerate = self.cam_fps
             self.camera.resolution = (self.cam_width, self.cam_height)
-            self.camera.zoom = (0.15, 0.15, 0.7, 0.7)
+            self.camera.zoom = (0.15, 0.10, 0.7, 0.8)
             self.cam_raw_capture = PiRGBArray(self.camera)
             
             print("Cam resolution: {}x{}".format(self.camera.resolution[0], self.camera.resolution[1]))
@@ -452,9 +452,11 @@ class Camera():
                     height = self.get_contour_height(best_contour)
                     print("Height of best contour: {}px".format(self.get_contour_height(best_contour)))
                     
-                    if saveImages:
+                if saveImages:
+                    if best_contour is not None:
                         img = self.draw_contour(img, best_contour, wantedShape)
-                        cv2.imwrite(fname + ".jpg", img)
+                    
+                    cv2.imwrite(fname + ".jpg", img)
 
 
                 if showStream:
@@ -546,14 +548,14 @@ class Camera():
         self.capture_custom_shapes()
         self.load_custom_shapes()
 
-        shape = 'heart'
+        shape = 'triangle'
 
         if not self.using_picamera:
             self.stream_from_camera()
 
         for i in range(1000):
             fname = "img" + str(i)
-            x, _ = self.stream_and_detect(wantedShape=shape, showStream=False, continuousStream=False, saveImages=True, fname=fname)
+            x, _ = self.stream_and_detect(wantedShape=shape, showStream=False, continuousStream=False, saveImages=True, fname=fname,minShapeHeight=35)
             
             if x:
                 print("Position of {}: {}px.".format(shape, x))

@@ -1,4 +1,4 @@
-Language model created by QuickLM on Thu Mar 29 16:42:49 EDT 2018
+Language model created by QuickLM on Wed Apr  4 22:18:55 EDT 2018
 Copyright (c) 1996-2010 Carnegie Mellon University and Alexander I. Rudnicky
 
 The model is in standard ARPA format, designed by Doug Paul while he was at MITRE.
@@ -17,26 +17,26 @@ ngram 3=5
 \1-grams:
 -0.7782 </s> -0.3010
 -0.7782 <s> -0.2218
--1.4771 LEMONADE -0.2218
+-1.4771 CIDER -0.2218
 -1.4771 MEDICINE -0.2218
 -1.4771 NO -0.2218
 -1.4771 OK -0.2218
 -1.4771 WATER -0.2218
 
 \2-grams:
--1.0000 <s> LEMONADE 0.0000
+-1.0000 <s> CIDER 0.0000
 -1.0000 <s> MEDICINE 0.0000
 -1.0000 <s> NO 0.0000
 -1.0000 <s> OK 0.0000
 -1.0000 <s> WATER 0.0000
--0.3010 LEMONADE </s> -0.3010
+-0.3010 CIDER </s> -0.3010
 -0.3010 MEDICINE </s> -0.3010
 -0.3010 NO </s> -0.3010
 -0.3010 OK </s> -0.3010
 -0.3010 WATER </s> -0.3010
 
 \3-grams:
--0.3010 <s> LEMONADE </s>
+-0.3010 <s> CIDER </s>
 -0.3010 <s> MEDICINE </s>
 -0.3010 <s> NO </s>
 -0.3010 <s> OK </s>

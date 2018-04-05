@@ -17,7 +17,7 @@ class turn_to_bottle:
         self.rightM.run_direct()
         self.ultrasonic = brick2.UltrasonicSensor()
         self.camera_aspect_width = 600
-        self.height_threshold = 35
+        self.height_threshold = 30
         self.base_speed = 0
         self.turn_speed_boost = 55
         self.leftm = []
@@ -57,8 +57,6 @@ class turn_to_bottle:
 
         self.rightM.run_timed(speed_sp=speed_rightM, time_sp=200)
         self.leftM.run_timed(speed_sp=speed_leftM, time_sp=200)
-        self.leftm.append(speed_leftM)
-        self.rightm.append(speed_rightM)
 
     def get_motor_speeds(self):
         movements = {
@@ -86,15 +84,15 @@ class turn_to_bottle:
                 speed_leftM = 90
             print("speed right: " + str(speed_leftM))
 
-        self.rightM.run_timed(time_sp=time_to_run, speed_sp=int(speed_rightM ))
-        self.leftM.run_timed(time_sp=time_to_run, speed_sp=int(speed_leftM ))
+        ev3proxy.motors_diff_speed_timed(left_speed=int(speed_leftM), right_speed=int(speed_rightM), time_run=time_to_run)
+        #self.rightM.run_timed(time_sp=time_to_run, speed_sp=int(speed_rightM ))
+        #self.leftM.run_timed(time_sp=time_to_run, speed_sp=int(speed_leftM ))
 
     def adjust_angle(self, cam, shape, tol=[300], time_to_run=200):
         # change to finite loop
         while True:
-            x, height = cam.stream_and_detect(wantedShape=shape, showStream=False, continuousStream=False, timeToRun=1.0, multiThread=False)
-            if x is not None and height > self.height_threshold:
-
+            x, height = cam.stream_and_detect(wantedShape=shape, showStream=False, continuousStream=False, timeToRun=1.0, multiThread=False,minShapeHeight=self.height_threshold)
+            if x is not None:
                 self.turn_once(x, time_to_run)
             print("X: " + str(x))
 

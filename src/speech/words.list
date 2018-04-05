@@ -1,5 +1,5 @@
-water /1e-0/
-medicine /1e-0/
-lemonade /1e-0/
-ok /1e+3/
-no /1e+3/
+water /1e-1/
+medicine /1e-1/
+cider /1e-1/
+ok /500/
+no /1e+2/
